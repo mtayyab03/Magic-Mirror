@@ -1,4 +1,4 @@
-import { FontAwesome, Ionicons } from "@expo/vector-icons";
+import { FontAwesome } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
@@ -25,9 +25,58 @@ import icons from "@/constants/icons";
 const AskMirrorScreen = () => {
   const [question, setQuestion] = useState(""); // ✅ State for input
   const router = useRouter();
+
+  const handleSend = async () => {
+    if (!question.trim()) return;
+
+    try {
+      const response = await fetch(
+        "https://api.openai.com/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer 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`, // <- Replace this!
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "gpt-3.5-turbo",
+            messages: [
+              {
+                role: "system",
+                content:
+                  "You are a mystical fortune teller. Your responses are poetic, eerie, and mysterious. Always speak in short, cryptic rhymes.",
+              },
+              {
+                role: "user",
+                content: question,
+              },
+            ],
+          }),
+        }
+      );
+
+      const data = await response.json();
+      console.log("OpenAI Response:", data);
+
+      if (response.ok && data.choices?.[0]?.message?.content) {
+        const answer = data.choices[0].message.content;
+        router.push({
+          pathname: "/ResponseScreen",
+          params: { answer },
+        });
+      } else {
+        console.error("OpenAI Error:", data);
+        alert("Something went wrong. Please try again.");
+      }
+    } catch (err) {
+      console.error("Fetch Error:", err);
+      alert("Failed to connect. Please check your network or API key.");
+    }
+  };
+
   return (
     <ScreenWrapper style={{ alignItems: "center" }}>
-      <ThemedText type="title" style={{ marginTop: 10 }}>
+      <ThemedText type="title" style={{ marginTop: RFPercentage(5) }}>
         Magic Mirror
       </ThemedText>
 
@@ -54,7 +103,7 @@ const AskMirrorScreen = () => {
 
             <View
               style={{
-                width: "95%",
+                width: "100%",
                 marginTop: RFPercentage(5),
                 flexDirection: "row",
                 alignItems: "center",
@@ -70,28 +119,10 @@ const AskMirrorScreen = () => {
                 multiline={true} // 👈 enable multiline
                 textAlignVertical="top" // 👈 start text at the top-left
               />
-
-              <TouchableOpacity
-                style={{
-                  width: RFPercentage(4),
-                  height: RFPercentage(4),
-                  borderRadius: RFPercentage(3),
-                  backgroundColor: Colors.primary,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  marginLeft: RFPercentage(1),
-                }}
-              >
-                <Ionicons color={Colors.white} size={20} name={"send"} />
-              </TouchableOpacity>
             </View>
 
             {/* speak button */}
-            <TouchableOpacity
-              onPress={() => router.push("/ResponseScreen")}
-              style={styles.loginbutton}
-              activeOpacity={0.7}
-            >
+            <TouchableOpacity style={styles.loginbutton} activeOpacity={0.7}>
               <LinearGradient
                 colors={[Colors.primary, "#E9C39A", Colors.primary] as const}
                 start={{ x: 0.5, y: 0 }} // top-center
@@ -105,6 +136,21 @@ const AskMirrorScreen = () => {
                   name={"microphone"}
                   style={{ marginLeft: RFPercentage(1) }}
                 />
+              </LinearGradient>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={handleSend}
+              style={styles.loginbutton}
+              activeOpacity={0.7}
+            >
+              <LinearGradient
+                colors={[Colors.purple, "#DB90DD", Colors.purple] as const}
+                start={{ x: 0.5, y: 0 }} // top-center
+                end={{ x: 0.5, y: 1 }} // bottom-center
+                style={styles.button}
+              >
+                <ThemedText type="button">Send</ThemedText>
               </LinearGradient>
             </TouchableOpacity>
           </View>
@@ -124,7 +170,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   input: {
-    width: "80%",
+    width: "90%",
     borderWidth: 1,
     borderColor: "#ccc",
     padding: 15,
@@ -153,6 +199,6 @@ const styles = StyleSheet.create({
     width: "95%",
     justifyContent: "center",
     alignItems: "center",
-    marginTop: RFPercentage(3),
+    marginTop: RFPercentage(1),
   },
 });

@@ -1,7 +1,10 @@
-import { useRouter } from "expo-router";
-import { useEffect, useRef } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import React, { useEffect, useRef } from "react";
 import { Animated, Easing, StyleSheet, View } from "react-native";
 import { RFPercentage } from "react-native-responsive-fontsize";
+
+// hooks
+import { useAudio } from "@/providers/AudioProvider";
 
 // componenets
 import ScreenWrapper from "@/components/Specific/ScreenWrapper";
@@ -12,6 +15,13 @@ import icons from "../../constants/icons";
 
 export default function SplashScreen() {
   const router = useRouter();
+  const { playLoopingMusic } = useAudio();
+
+  useFocusEffect(
+    React.useCallback(() => {
+      playLoopingMusic(); // 🔊 start music when HomeScreen is focused
+    }, [])
+  );
 
   const scaleAnim = useRef(new Animated.Value(1)).current;
 

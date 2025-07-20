@@ -1,14 +1,18 @@
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import LottieView from "lottie-react-native"; // ✅ Lottie import
-import { useEffect, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import {
   Animated,
   Easing,
+  Platform,
   StyleSheet,
   TouchableOpacity,
   View,
 } from "react-native";
 import { RFPercentage } from "react-native-responsive-fontsize";
+
+// hooks
+import { useAudio } from "@/providers/AudioProvider";
 
 // componenets
 import ScreenWrapper from "@/components/Specific/ScreenWrapper";
@@ -23,6 +27,16 @@ const HomeScreen = () => {
   const router = useRouter();
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const lottieRef = useRef<LottieView>(null);
+
+  const { playLoopingMusic, stopMusic } = useAudio();
+
+  useFocusEffect(
+    React.useCallback(() => {
+      playLoopingMusic(); // 🔊 start music when HomeScreen is focused
+
+      return () => {};
+    }, [])
+  );
 
   useEffect(() => {
     // Start pulsing logo animation
@@ -49,7 +63,10 @@ const HomeScreen = () => {
 
   return (
     <ScreenWrapper style={{ alignItems: "center" }}>
-      <ThemedText type="title" style={{ marginTop: 10 }}>
+      <ThemedText
+        type="title"
+        style={{ marginTop: Platform.OS === "ios" ? 10 : RFPercentage(5) }}
+      >
         Magic Mirror
       </ThemedText>
 
@@ -92,7 +109,10 @@ const HomeScreen = () => {
       <TouchableOpacity
         style={styles.loginbutton}
         activeOpacity={0.7}
-        onPress={() => router.push("/AskMirrorScreen")}
+        onPress={() => {
+          stopMusic(); // 👈 Stop only when navigating to AskMirrorScreen
+          router.push("/AskMirrorScreen");
+        }}
       >
         <AppButton
           title={"Ask the Mirror"}

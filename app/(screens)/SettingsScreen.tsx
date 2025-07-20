@@ -1,12 +1,16 @@
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   ImageBackground,
+  Platform,
   StyleSheet,
   Switch,
   TouchableOpacity,
   View,
 } from "react-native";
+
+// hooks
+import { useAudio } from "@/providers/AudioProvider";
 
 // componenets
 import ScreenWrapper from "@/components/Specific/ScreenWrapper";
@@ -20,9 +24,19 @@ import { RFPercentage } from "react-native-responsive-fontsize";
 
 const SettingsScreen = () => {
   const router = useRouter();
-  const [isEnabled, setIsEnabled] = useState(false);
   const [isEnabledMusic, setIsEnabledMusic] = useState(true);
   const [menuid, setmenuid] = useState(1);
+
+  const { playLoopingMusic, stopMusic, musicEnabled, setMusicEnabled } =
+    useAudio();
+
+  useFocusEffect(
+    React.useCallback(() => {
+      if (musicEnabled) {
+        playLoopingMusic();
+      }
+    }, [musicEnabled]) // 👈 depends on toggle
+  );
   const selectTime = [
     {
       id: 1,
@@ -40,7 +54,10 @@ const SettingsScreen = () => {
 
   return (
     <ScreenWrapper style={{ alignItems: "center" }}>
-      <ThemedText type="title" style={{ marginTop: 10 }}>
+      <ThemedText
+        type="title"
+        style={{ marginTop: Platform.OS === "ios" ? 10 : RFPercentage(5) }}
+      >
         Settings
       </ThemedText>
 
@@ -58,10 +75,13 @@ const SettingsScreen = () => {
             <ThemedText type="default">Voice toggle</ThemedText>
 
             <Switch
-              value={isEnabled}
-              onValueChange={setIsEnabled}
+              value={musicEnabled}
+              onValueChange={(val) => {
+                setMusicEnabled(val);
+                if (!val) stopMusic(); // Stop immediately if turning off
+              }}
               trackColor={{ false: "#767577", true: Colors.purple }}
-              thumbColor={isEnabled ? Colors.white : "#f4f3f4"}
+              thumbColor={musicEnabled ? Colors.white : "#f4f3f4"}
             />
           </View>
 

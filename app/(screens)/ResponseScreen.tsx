@@ -1,10 +1,12 @@
-import { useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import * as Speech from "expo-speech";
 import LottieView from "lottie-react-native"; // ✅ Lottie import
-import { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
   Easing,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   TouchableOpacity,
   View,
@@ -20,6 +22,55 @@ const ResponseScreen = () => {
   const router = useRouter();
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const lottieRef = useRef<LottieView>(null);
+  const [displayedText, setDisplayedText] = useState("");
+
+  const { answer } = useLocalSearchParams<{ answer: string }>();
+
+  useFocusEffect(
+    React.useCallback(() => {
+      if (!answer) return;
+
+      let index = 0;
+      const words = answer.trim().split(/\s+/);
+      let isActive = true;
+      setDisplayedText("");
+
+      const delayTimeout = setTimeout(() => {
+        // Type words one by one
+        const typeInterval = setInterval(() => {
+          if (index < words.length && isActive) {
+            const word = words[index];
+            if (word) {
+              setDisplayedText((prev) => prev + word + " ");
+            }
+            index++;
+          } else {
+            clearInterval(typeInterval);
+          }
+        }, 300);
+
+        // Speak
+        Speech.speak(answer, {
+          pitch: 0.7,
+          rate: 0.1,
+          onDone: () => {
+            if (isActive) {
+              lottieRef.current?.pause();
+            }
+          },
+        });
+
+        lottieRef.current?.play();
+      }, 300); // 👈 small buffer after focus
+
+      return () => {
+        isActive = false;
+        clearTimeout(delayTimeout);
+        Speech.stop();
+        lottieRef.current?.pause();
+      };
+    }, [answer])
+  );
 
   useEffect(() => {
     // Start pulsing logo animation
@@ -82,21 +133,32 @@ const ResponseScreen = () => {
         <View
           style={{
             width: "80%",
+            height: RFPercentage(20), // 👈 adjust height as needed
             marginTop: RFPercentage(2),
+            borderWidth: 0.5,
+            borderColor: Colors.white,
+            borderRadius: RFPercentage(1),
+            padding: RFPercentage(1),
+            backgroundColor: "rgba(255, 255, 255, 0.05)",
           }}
         >
-          <ThemedText
-            type="default"
-            style={{
-              fontSize: RFPercentage(2.2),
-              textAlign: "center",
-              color: Colors.white,
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{
+              paddingBottom: RFPercentage(1),
             }}
           >
-            Fate stirs quietly where shadows sleep, Its secrets buried ever
-            deep. Paths entwine where none can see, The thread pulls you,
-            silently.
-          </ThemedText>
+            <ThemedText
+              type="default"
+              style={{
+                fontSize: RFPercentage(2.2),
+                textAlign: "center",
+                color: Colors.white,
+              }}
+            >
+              {displayedText}
+            </ThemedText>
+          </ScrollView>
         </View>
 
         <View
@@ -112,7 +174,11 @@ const ResponseScreen = () => {
           <TouchableOpacity
             style={styles.loginbutton}
             activeOpacity={0.7}
-            onPress={() => router.push("/AskMirrorScreen")}
+            onPress={() => {
+              Speech.stop(); // 👈 Stop voice
+              lottieRef.current?.pause(); // 👈 Stop animation
+              router.push("/AskMirrorScreen");
+            }}
           >
             <AppButton
               title={"Ask Again"}
@@ -120,7 +186,15 @@ const ResponseScreen = () => {
             />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.loginbutton} activeOpacity={0.7}>
+          <TouchableOpacity
+            onPress={() => {
+              Speech.stop(); // 👈 Stop voice
+              lottieRef.current?.pause(); // 👈 Stop animation
+              router.push("/SettingsScreen");
+            }}
+            style={styles.loginbutton}
+            activeOpacity={0.7}
+          >
             <AppButton
               title={"Save History"}
               colors={[Colors.primary, "#E9C39A", Colors.primary] as const}
@@ -144,6 +218,7 @@ const styles = StyleSheet.create({
     flex: 1,
     width: "100%",
     alignItems: "center",
+    marginTop: RFPercentage(5),
   },
   logoContainer: {
     width: "100%",
