@@ -1,8 +1,9 @@
 import { FontAwesome } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
+import { Audio } from "expo-av";
 import {
   ImageBackground,
   Keyboard,
@@ -22,12 +23,88 @@ import { Colors } from "@/constants/Colors";
 import { FontFamily } from "@/constants/font";
 import icons from "@/constants/icons";
 
+const OPENAI_API_KEY =
+  "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";
+
 const AskMirrorScreen = () => {
   const [question, setQuestion] = useState(""); // ✅ State for input
   const router = useRouter();
+  const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
 
-  const handleSend = async () => {
-    if (!question.trim()) return;
+  const startRecording = async () => {
+    try {
+      const { granted } = await Audio.requestPermissionsAsync();
+      if (!granted) return alert("Microphone permission required!");
+
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+
+      const { recording } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY
+      );
+      setRecording(recording);
+      setIsRecording(true);
+    } catch (err) {
+      console.error("Failed to start recording", err);
+    }
+  };
+
+  const stopRecording = async () => {
+    try {
+      if (!recording) return;
+
+      await recording.stopAndUnloadAsync();
+      const uri = recording.getURI();
+      setRecording(null);
+      setIsRecording(false);
+
+      const formData = new FormData();
+      formData.append("file", {
+        uri: uri!,
+        type: "audio/m4a",
+        name: "recording.m4a",
+      } as any);
+      formData.append("model", "whisper-1");
+
+      const response = await fetch(
+        "https://api.openai.com/v1/audio/transcriptions",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${OPENAI_API_KEY}`,
+          },
+          body: formData,
+        }
+      );
+
+      const data = await response.json();
+      const transcribed = data.text;
+      setQuestion(transcribed);
+
+      handleSend(transcribed);
+    } catch (err) {
+      console.error("Whisper error:", err);
+      alert("Transcription failed.");
+    }
+  };
+  useEffect(() => {
+    return () => {
+      if (recording) {
+        try {
+          recording.stopAndUnloadAsync();
+        } catch (e) {
+          console.warn("Recording cleanup error", e);
+        }
+      }
+    };
+  }, [recording]);
+
+  const handleSend = async (textToSend?: string) => {
+    const input = textToSend || question;
+    if (!input.trim()) return;
 
     try {
       const response = await fetch(
@@ -35,7 +112,7 @@ const AskMirrorScreen = () => {
         {
           method: "POST",
           headers: {
-            Authorization: `Bearer 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`, // <- Replace this!
+            Authorization: `Bearer ${OPENAI_API_KEY}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
@@ -48,7 +125,7 @@ const AskMirrorScreen = () => {
               },
               {
                 role: "user",
-                content: question,
+                content: input,
               },
             ],
           }),
@@ -56,21 +133,16 @@ const AskMirrorScreen = () => {
       );
 
       const data = await response.json();
-      console.log("OpenAI Response:", data);
-
       if (response.ok && data.choices?.[0]?.message?.content) {
         const answer = data.choices[0].message.content;
-        router.push({
-          pathname: "/ResponseScreen",
-          params: { answer },
-        });
+        router.push({ pathname: "/ResponseScreen", params: { answer } });
       } else {
-        console.error("OpenAI Error:", data);
-        alert("Something went wrong. Please try again.");
+        console.error("GPT Error:", data);
+        alert("Something went wrong. Try again.");
       }
     } catch (err) {
       console.error("Fetch Error:", err);
-      alert("Failed to connect. Please check your network or API key.");
+      alert("Network error.");
     }
   };
 
@@ -122,14 +194,22 @@ const AskMirrorScreen = () => {
             </View>
 
             {/* speak button */}
-            <TouchableOpacity style={styles.loginbutton} activeOpacity={0.7}>
+            <TouchableOpacity
+              onPressIn={startRecording}
+              onPressOut={stopRecording}
+              style={styles.loginbutton}
+              activeOpacity={0.7}
+            >
               <LinearGradient
                 colors={[Colors.primary, "#E9C39A", Colors.primary] as const}
                 start={{ x: 0.5, y: 0 }} // top-center
                 end={{ x: 0.5, y: 1 }} // bottom-center
                 style={styles.button}
               >
-                <ThemedText type="button">Speak to the Mirror</ThemedText>
+                <ThemedText type="button">
+                  {" "}
+                  {isRecording ? "Listening..." : "Speak to the Mirror"}
+                </ThemedText>
                 <FontAwesome
                   color={Colors.blacky}
                   size={20}
@@ -140,7 +220,7 @@ const AskMirrorScreen = () => {
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={handleSend}
+              onPress={() => handleSend()}
               style={styles.loginbutton}
               activeOpacity={0.7}
             >

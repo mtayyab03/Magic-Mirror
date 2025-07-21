@@ -4,6 +4,7 @@ import LottieView from "lottie-react-native"; // ✅ Lottie import
 import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
+  AppState,
   Easing,
   SafeAreaView,
   ScrollView,
@@ -26,47 +27,72 @@ const ResponseScreen = () => {
 
   const { answer } = useLocalSearchParams<{ answer: string }>();
 
+  // Stop speech when app goes to background
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state !== "active") {
+        Speech.stop();
+      }
+    });
+    return () => sub.remove();
+  }, []);
   useFocusEffect(
     React.useCallback(() => {
-      if (!answer) return;
+      if (!answer || typeof answer !== "string") return;
 
+      let isActive = true;
       let index = 0;
       const words = answer.trim().split(/\s+/);
-      let isActive = true;
-      setDisplayedText("");
+      let typingInterval: number | null = null;
 
-      const delayTimeout = setTimeout(() => {
-        // Type words one by one
-        const typeInterval = setInterval(() => {
-          if (index < words.length && isActive) {
-            const word = words[index];
-            if (word) {
-              setDisplayedText((prev) => prev + word + " ");
-            }
-            index++;
-          } else {
-            clearInterval(typeInterval);
+      const prepareAndSpeak = async () => {
+        try {
+          const isSpeaking = await Speech.isSpeakingAsync();
+          if (isSpeaking) {
+            await Speech.stop();
+            await new Promise((res) => setTimeout(res, 300));
           }
-        }, 300);
 
-        // Speak
-        Speech.speak(answer, {
-          pitch: 0.7,
-          rate: 0.1,
-          onDone: () => {
-            if (isActive) {
-              lottieRef.current?.pause();
+          lottieRef.current?.reset();
+          lottieRef.current?.play();
+
+          typingInterval = setInterval(() => {
+            if (!isActive) {
+              clearInterval(typingInterval!);
+              return;
             }
-          },
-        });
+            if (index < words.length) {
+              setDisplayedText((prev) => prev + words[index++] + " ");
+            } else {
+              clearInterval(typingInterval!);
+            }
+          }, 300);
 
-        lottieRef.current?.play();
-      }, 300); // 👈 small buffer after focus
+          Speech.speak(answer, {
+            pitch: 0.7,
+            rate: 0.1,
+            onDone: () => {
+              if (isActive) {
+                lottieRef.current?.pause();
+              }
+            },
+          });
+        } catch (e) {
+          console.warn("Speech error", e);
+        }
+      };
+
+      setDisplayedText("");
+      prepareAndSpeak();
 
       return () => {
         isActive = false;
-        clearTimeout(delayTimeout);
-        Speech.stop();
+        if (typingInterval) clearInterval(typingInterval);
+        try {
+          Speech.stop();
+        } catch (e) {
+          console.warn("Speech stop error", e);
+        }
         lottieRef.current?.pause();
       };
     }, [answer])
@@ -177,7 +203,7 @@ const ResponseScreen = () => {
             onPress={() => {
               Speech.stop(); // 👈 Stop voice
               lottieRef.current?.pause(); // 👈 Stop animation
-              router.push("/AskMirrorScreen");
+              router.replace("/AskMirrorScreen");
             }}
           >
             <AppButton
