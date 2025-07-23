@@ -6,6 +6,7 @@ import {
   Animated,
   AppState,
   Easing,
+  Platform,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -194,7 +195,7 @@ const ResponseScreen = () => {
             alignItems: "center",
             justifyContent: "space-between",
             position: "absolute",
-            bottom: RFPercentage(5),
+            bottom: Platform.OS === "ios" ? RFPercentage(5) : RFPercentage(7),
           }}
         >
           <TouchableOpacity
