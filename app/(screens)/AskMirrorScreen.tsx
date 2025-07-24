@@ -31,6 +31,9 @@ const AskMirrorScreen = () => {
   const router = useRouter();
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [isRecording, setIsRecording] = useState(false);
+  const [selectedLanguage, setSelectedLanguage] = useState<
+    "en" | "hi" | "ja" | "bn"
+  >("en");
 
   const startRecording = async () => {
     try {
@@ -120,8 +123,15 @@ const AskMirrorScreen = () => {
             messages: [
               {
                 role: "system",
-                content:
-                  "You are a mystical fortune teller. Your responses are poetic, eerie, and mysterious. Always speak in short, cryptic rhymes.",
+                content: `You are a mystical fortune teller. Your responses are poetic, eerie, and mysterious. Always speak in short, cryptic rhymes. Respond only in ${
+                  selectedLanguage === "en"
+                    ? "English"
+                    : selectedLanguage === "hi"
+                    ? "Hindi"
+                    : selectedLanguage === "ja"
+                    ? "Japanese"
+                    : "Bengali"
+                }.`,
               },
               {
                 role: "user",
@@ -135,7 +145,10 @@ const AskMirrorScreen = () => {
       const data = await response.json();
       if (response.ok && data.choices?.[0]?.message?.content) {
         const answer = data.choices[0].message.content;
-        router.push({ pathname: "/ResponseScreen", params: { answer } });
+        router.push({
+          pathname: "/ResponseScreen",
+          params: { answer, selectedLanguage },
+        }); // Pass language too
       } else {
         console.error("GPT Error:", data);
         alert("Something went wrong. Try again.");
@@ -176,7 +189,7 @@ const AskMirrorScreen = () => {
             <View
               style={{
                 width: "100%",
-                marginTop: RFPercentage(5),
+                marginTop: RFPercentage(3),
                 flexDirection: "row",
                 alignItems: "center",
                 justifyContent: "center",
@@ -218,6 +231,43 @@ const AskMirrorScreen = () => {
                 />
               </LinearGradient>
             </TouchableOpacity>
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "center",
+                gap: 10,
+                marginTop: RFPercentage(4),
+              }}
+            >
+              {[
+                { label: "English", code: "en" },
+                { label: "Hindi", code: "hi" },
+                { label: "Japanese", code: "ja" },
+                { label: "Bangali", code: "bn" },
+              ].map(({ label, code }) => (
+                <TouchableOpacity
+                  key={code}
+                  onPress={() => setSelectedLanguage(code as any)}
+                  style={{
+                    paddingVertical: 8,
+                    paddingHorizontal: 8,
+                    borderRadius: 8,
+                    backgroundColor:
+                      selectedLanguage === code ? Colors.primary : "#ddd",
+                  }}
+                >
+                  <ThemedText
+                    type="default"
+                    style={{
+                      fontSize: RFPercentage(2),
+                      color: selectedLanguage === code ? "white" : "black",
+                    }}
+                  >
+                    {label}
+                  </ThemedText>
+                </TouchableOpacity>
+              ))}
+            </View>
 
             <TouchableOpacity
               onPress={() => handleSend()}
