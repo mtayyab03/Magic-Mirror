@@ -1,6 +1,6 @@
-import { FontAwesome } from "@expo/vector-icons";
+import { Feather, FontAwesome } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 
 import { Audio } from "expo-av";
@@ -19,6 +19,9 @@ import ScreenWrapper from "@/components/Specific/ScreenWrapper";
 import { ThemedText } from "@/components/ThemedText";
 import { RFPercentage } from "react-native-responsive-fontsize";
 
+// hooks
+import { useAudio } from "@/providers/AudioProvider";
+
 import { Colors } from "@/constants/Colors";
 import { FontFamily } from "@/constants/font";
 import icons from "@/constants/icons";
@@ -31,14 +34,27 @@ const AskMirrorScreen = () => {
   const router = useRouter();
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [isRecording, setIsRecording] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false); // 🔄 To track when transcription is in progress
+
   const [selectedLanguage, setSelectedLanguage] = useState<
     "en" | "hi" | "ja" | "bn"
   >("en");
+
+  const { playLoopingMusic, stopMusic } = useAudio();
+
+  useFocusEffect(
+    React.useCallback(() => {
+      playLoopingMusic(); // 🔊 start music when HomeScreen is focused
+      return () => {};
+    }, [])
+  );
 
   const startRecording = async () => {
     try {
       const { granted } = await Audio.requestPermissionsAsync();
       if (!granted) return alert("Microphone permission required!");
+
+      stopMusic(); // 👈 Stop background music
 
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,
@@ -58,11 +74,12 @@ const AskMirrorScreen = () => {
   const stopRecording = async () => {
     try {
       if (!recording) return;
-
+      setIsProcessing(true); // Start processing
       await recording.stopAndUnloadAsync();
       const uri = recording.getURI();
       setRecording(null);
       setIsRecording(false);
+      playLoopingMusic(); // 👈 Resume background music
 
       const formData = new FormData();
       formData.append("file", {
@@ -91,6 +108,8 @@ const AskMirrorScreen = () => {
     } catch (err) {
       console.error("Whisper error:", err);
       alert("Transcription failed.");
+    } finally {
+      setIsProcessing(false); // End processing
     }
   };
   useEffect(() => {
@@ -145,6 +164,7 @@ const AskMirrorScreen = () => {
       const data = await response.json();
       if (response.ok && data.choices?.[0]?.message?.content) {
         const answer = data.choices[0].message.content;
+        stopMusic(); // 👈 Stop background music
         router.push({
           pathname: "/ResponseScreen",
           params: { answer, selectedLanguage },
@@ -161,9 +181,24 @@ const AskMirrorScreen = () => {
 
   return (
     <ScreenWrapper style={{ alignItems: "center" }}>
-      <ThemedText type="title" style={{ marginTop: RFPercentage(5) }}>
-        Magic Mirror
-      </ThemedText>
+      <View
+        style={{
+          width: "90%",
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "center",
+          marginTop: RFPercentage(5),
+        }}
+      >
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={() => router.push("/HomeScreen")}
+          style={{ position: "absolute", left: RFPercentage(1) }}
+        >
+          <Feather color={Colors.primary} size={40} name={"arrow-left"} />
+        </TouchableOpacity>
+        <ThemedText type="title">Magic Mirror</ThemedText>
+      </View>
 
       <ImageBackground source={icons.roll} style={styles.background}>
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -219,9 +254,8 @@ const AskMirrorScreen = () => {
                 end={{ x: 0.5, y: 1 }} // bottom-center
                 style={styles.button}
               >
-                <ThemedText type="button">
-                  {" "}
-                  {isRecording ? "Listening..." : "Speak to the Mirror"}
+                <ThemedText type="button" style={{ fontSize: RFPercentage(2) }}>
+                  {isRecording ? "Listening..." : "Hold to Speak to the Mirror"}
                 </ThemedText>
                 <FontAwesome
                   color={Colors.blacky}
@@ -270,8 +304,12 @@ const AskMirrorScreen = () => {
             </View>
 
             <TouchableOpacity
+              disabled={isRecording || isProcessing || !question.trim()}
               onPress={() => handleSend()}
-              style={styles.loginbutton}
+              style={[
+                styles.loginbutton,
+                { opacity: isRecording || isProcessing ? 0.5 : 1 },
+              ]}
               activeOpacity={0.7}
             >
               <LinearGradient

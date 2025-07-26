@@ -110,7 +110,6 @@ const HomeScreen = () => {
         style={styles.loginbutton}
         activeOpacity={0.7}
         onPress={() => {
-          stopMusic(); // 👈 Stop only when navigating to AskMirrorScreen
           router.push("/AskMirrorScreen");
         }}
       >

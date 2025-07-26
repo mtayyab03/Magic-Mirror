@@ -75,6 +75,16 @@ const SettingsScreen = () => {
             <ThemedText type="default">Voice toggle</ThemedText>
 
             <Switch
+              value={isEnabledMusic}
+              onValueChange={setIsEnabledMusic}
+              trackColor={{ false: "#767577", true: Colors.purple }}
+              thumbColor={isEnabledMusic ? Colors.white : "#f4f3f4"}
+            />
+          </View>
+
+          <View style={[styles.row, { marginTop: RFPercentage(4) }]}>
+            <ThemedText type="default">BackgroundMusic toggle</ThemedText>
+            <Switch
               value={musicEnabled}
               onValueChange={(val) => {
                 setMusicEnabled(val);
@@ -82,17 +92,6 @@ const SettingsScreen = () => {
               }}
               trackColor={{ false: "#767577", true: Colors.purple }}
               thumbColor={musicEnabled ? Colors.white : "#f4f3f4"}
-            />
-          </View>
-
-          <View style={[styles.row, { marginTop: RFPercentage(4) }]}>
-            <ThemedText type="default">BackgroundMusic toggle</ThemedText>
-
-            <Switch
-              value={isEnabledMusic}
-              onValueChange={setIsEnabledMusic}
-              trackColor={{ false: "#767577", true: Colors.purple }}
-              thumbColor={isEnabledMusic ? Colors.white : "#f4f3f4"}
             />
           </View>
 

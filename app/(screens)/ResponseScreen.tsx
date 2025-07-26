@@ -85,7 +85,7 @@ const ResponseScreen = () => {
       const playResponse = async () => {
         try {
           await stopSpeech(); // cleanup if any
-          await new Promise((res) => setTimeout(res, 300));
+          await new Promise((res) => setTimeout(res, 100));
 
           setDisplayedText("");
           lottieRef.current?.reset();
@@ -101,7 +101,7 @@ const ResponseScreen = () => {
             } else {
               clearInterval(typingInterval!);
             }
-          }, 300);
+          }, 400);
 
           const res = await fetch(
             `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_TTS_API_KEY}`,
@@ -114,7 +114,7 @@ const ResponseScreen = () => {
                 audioConfig: {
                   audioEncoding: "MP3",
                   pitch: -10.0,
-                  speakingRate: 0.55,
+                  speakingRate: 0.6,
                 },
               }),
             }
