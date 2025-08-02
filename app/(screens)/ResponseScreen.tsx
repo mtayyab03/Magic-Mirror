@@ -1,4 +1,5 @@
 import { Audio } from "expo-av";
+import * as FileSystem from "expo-file-system";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import LottieView from "lottie-react-native"; // ✅ Lottie import
 import React, { useEffect, useRef, useState } from "react";
@@ -17,11 +18,13 @@ import {
 import { ThemedText } from "@/components/ThemedText";
 import AppButton from "@/components/common/AppButton";
 // constants
+import { Buffer } from "buffer";
 import { RFPercentage } from "react-native-responsive-fontsize";
 import { Colors } from "../../constants/Colors";
+global.Buffer = global.Buffer || Buffer;
 
-const GOOGLE_TTS_API_KEY = "AIzaSyDypRS1Lo_ou4zE7iCK9HklFR4BlpueABU";
-
+const ELEVENLABS_API_KEY =
+  "sk_a54c3ecf393a06eb066abc38d177bbaa47899466f4c0aa95";
 const ResponseScreen = () => {
   const router = useRouter();
   const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -32,22 +35,19 @@ const ResponseScreen = () => {
     answer: string;
     selectedLanguage?: "en" | "hi" | "ja" | "bn";
   }>();
-  const voiceConfig = {
-    languageCode: "en-US",
-    name: "en-US-Wavenet-B",
-    ssmlGender: "MALE",
-  };
 
-  if (selectedLanguage === "hi") {
-    voiceConfig.languageCode = "hi-IN";
-    voiceConfig.name = "hi-IN-Standard-B"; // use Standard if Wavenet is unsupported
-  } else if (selectedLanguage === "ja") {
-    voiceConfig.languageCode = "ja-JP";
-    voiceConfig.name = "ja-JP-Wavenet-B";
-  } else if (selectedLanguage === "bn") {
-    voiceConfig.languageCode = "bn-IN";
-    voiceConfig.name = "bn-IN-Wavenet-B";
-  }
+  const getVoiceId = (lang: string) => {
+    switch (lang) {
+      case "hi":
+        return "mHbDjPgC1xHlwoxsW9yF"; // Hindi-compatible
+      case "ja":
+        return "x6hhUN36w6T8JjJp0Y9e"; // Japanese-compatible
+      case "bn":
+        return "PU9whl7aa1ph79ofu6MV"; // Bengali-compatible
+      default:
+        return "XCj6y0PF0QVxlEhv3Mzr"; // Dark, masculine
+    }
+  };
 
   const [displayedText, setDisplayedText] = useState("");
 
@@ -81,16 +81,19 @@ const ResponseScreen = () => {
       let index = 0;
       let typingInterval: number | null = null;
       const words = answer.trim().split(/\s+/);
+      const VOICE_ID = getVoiceId(selectedLanguage);
 
       const playResponse = async () => {
         try {
-          await stopSpeech(); // cleanup if any
-          await new Promise((res) => setTimeout(res, 100));
+          await stopSpeech(); // Cleanup
 
-          setDisplayedText("");
+          setDisplayedText(""); // Reset text
+
+          // Start animation immediately
           lottieRef.current?.reset();
           lottieRef.current?.play();
 
+          // Start typing effect immediately
           typingInterval = setInterval(() => {
             if (!isActive) {
               clearInterval(typingInterval!);
@@ -103,38 +106,58 @@ const ResponseScreen = () => {
             }
           }, 400);
 
+          // Now begin fetching ElevenLabs audio in background
           const res = await fetch(
-            `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_TTS_API_KEY}`,
+            `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`,
             {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: {
+                "xi-api-key": ELEVENLABS_API_KEY,
+                "Content-Type": "application/json",
+              },
               body: JSON.stringify({
-                input: { text: answer },
-                voice: voiceConfig,
-                audioConfig: {
-                  audioEncoding: "MP3",
-                  pitch: -10.0,
-                  speakingRate: 0.6,
+                text: answer,
+                voice_settings: {
+                  stability: 0.1,
+                  similarity_boost: 0.7,
+                  style: 0.8,
+                  use_speaker_boost: true,
                 },
               }),
             }
           );
 
-          const data = await res.json();
-          if (!data.audioContent) throw new Error("No audio content");
+          if (!res.ok) {
+            const errorText = await res.text();
+            console.error("TTS failed:", res.status, errorText);
+            throw new Error("TTS API call failed");
+          }
 
-          const uri = `data:audio/mp3;base64,${data.audioContent}`;
-          const { sound } = await Audio.Sound.createAsync({ uri });
+          const arrayBuffer = await res.arrayBuffer();
+          const base64Audio = Buffer.from(arrayBuffer).toString("base64");
+          const fileUri = FileSystem.documentDirectory + "tts.mp3";
+
+          await FileSystem.writeAsStringAsync(fileUri, base64Audio, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+
+          await Audio.setAudioModeAsync({
+            allowsRecordingIOS: false,
+            staysActiveInBackground: false,
+            playsInSilentModeIOS: true,
+          });
+
+          const { sound } = await Audio.Sound.createAsync({ uri: fileUri });
           soundRef.current = sound;
 
+          await sound.setRateAsync(0.9, true); // Slower playback
           sound.setOnPlaybackStatusUpdate((status) => {
-            if (!status.isLoaded) return;
-            if (status.didJustFinish && isActive) {
-              lottieRef.current?.pause(); // stop animation exactly when done
+            if ("didJustFinish" in status && status.didJustFinish && isActive) {
+              lottieRef.current?.pause(); // Stop animation when voice ends
             }
           });
 
-          await sound.playAsync();
+          await sound.playAsync(); // Play voice
         } catch (err) {
           console.warn("TTS error:", err);
         }
@@ -181,7 +204,7 @@ const ResponseScreen = () => {
         <View style={styles.logoContainer}>
           <LottieView
             ref={lottieRef}
-            source={require("../../assets/lotties/mirror.json")}
+            source={require("../../assets/lotties/Eface.json")}
             autoPlay={false} // Let useEffect control it
             loop
             style={styles.mirror}

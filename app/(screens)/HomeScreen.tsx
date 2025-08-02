@@ -28,7 +28,7 @@ const HomeScreen = () => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const lottieRef = useRef<LottieView>(null);
 
-  const { playLoopingMusic, stopMusic } = useAudio();
+  const { playLoopingMusic } = useAudio();
 
   useFocusEffect(
     React.useCallback(() => {
@@ -174,5 +174,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginTop: RFPercentage(1),
+  },
+  logoContainere: {
+    width: "100%",
+    height: RFPercentage(60),
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: RFPercentage(2),
+  },
+  mirror: {
+    width: RFPercentage(60), // adjust size as needed
+    height: RFPercentage(60),
   },
 });
