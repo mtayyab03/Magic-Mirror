@@ -31,9 +31,14 @@ const ResponseScreen = () => {
   const lottieRef = useRef<LottieView>(null);
   const soundRef = useRef<Audio.Sound | null>(null);
 
-  const { answer, selectedLanguage = "en" } = useLocalSearchParams<{
+  const {
+    answer,
+    selectedLanguage = "en",
+    emotion,
+  } = useLocalSearchParams<{
     answer: string;
     selectedLanguage?: "en" | "hi" | "ja" | "bn";
+    emotion?: "happy" | "sad" | "angry" | "surprise" | "neutral";
   }>();
 
   const getVoiceId = (lang: string) => {
@@ -204,7 +209,17 @@ const ResponseScreen = () => {
         <View style={styles.logoContainer}>
           <LottieView
             ref={lottieRef}
-            source={require("../../assets/lotties/Eface.json")}
+            source={
+              emotion === "happy"
+                ? require("../../assets/lotties/happy.json")
+                : emotion === "sad"
+                ? require("../../assets/lotties/sad.json")
+                : emotion === "angry"
+                ? require("../../assets/lotties/angry.json")
+                : emotion === "surprise"
+                ? require("../../assets/lotties/surprise.json")
+                : require("../../assets/lotties/neutral.json")
+            }
             autoPlay={false} // Let useEffect control it
             loop
             style={styles.mirror}

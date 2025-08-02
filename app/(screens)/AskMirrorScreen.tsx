@@ -150,7 +150,7 @@ const AskMirrorScreen = () => {
                     : selectedLanguage === "ja"
                     ? "Japanese"
                     : "Bengali"
-                }.`,
+                }. After the response, on a new line, write the emotion clearly in the format: <emotion: happy> or <emotion: sad>. Valid emotions: happy, sad, angry, surprise, neutral.`,
               },
               {
                 role: "user",
@@ -163,11 +163,27 @@ const AskMirrorScreen = () => {
 
       const data = await response.json();
       if (response.ok && data.choices?.[0]?.message?.content) {
-        const answer = data.choices[0].message.content;
+        const fullContent = data.choices[0].message.content;
+
+        // ✅ Extract the emotion from "<emotion: ...>"
+        const match = fullContent.match(/<emotion:\s*(.*?)>/i);
+        const emotion = match?.[1]?.trim().toLowerCase();
+
+        // ✅ Extract poetic response without the <emotion> tag
+        const answer = fullContent.replace(/<emotion:\s*.*?>/i, "").trim();
+
+        const validEmotions = ["happy", "sad", "angry", "surprise", "neutral"];
+        const emotionLabel = validEmotions.includes(emotion)
+          ? emotion
+          : "neutral";
         stopMusic(); // 👈 Stop background music
         router.push({
           pathname: "/ResponseScreen",
-          params: { answer, selectedLanguage },
+          params: {
+            answer,
+            selectedLanguage,
+            emotion: emotionLabel,
+          },
         }); // Pass language too
       } else {
         console.error("GPT Error:", data);
