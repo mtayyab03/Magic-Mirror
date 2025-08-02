@@ -34,7 +34,7 @@ const ResponseScreen = () => {
   const {
     answer,
     selectedLanguage = "en",
-    emotion,
+    emotion = "neutral",
   } = useLocalSearchParams<{
     answer: string;
     selectedLanguage?: "en" | "hi" | "ja" | "bn";
@@ -55,6 +55,7 @@ const ResponseScreen = () => {
   };
 
   const [displayedText, setDisplayedText] = useState("");
+  const [isPlaying, setIsPlaying] = useState(false);
 
   // Cleanup on background
   useEffect(() => {
@@ -70,6 +71,7 @@ const ResponseScreen = () => {
       if (soundRef.current) {
         await soundRef.current.stopAsync();
         await soundRef.current.unloadAsync();
+        soundRef.current.setOnPlaybackStatusUpdate(null); // ✅ Clear callback
         soundRef.current = null;
       }
     } catch (err) {
@@ -85,10 +87,11 @@ const ResponseScreen = () => {
       let isActive = true;
       let index = 0;
       let typingInterval: number | null = null;
-      const words = answer.trim().split(/\s+/);
+      const words = (answer || "").trim().split(/\s+/);
       const VOICE_ID = getVoiceId(selectedLanguage);
 
       const playResponse = async () => {
+        if (!answer || typeof answer !== "string") return;
         try {
           await stopSpeech(); // Cleanup
 
@@ -97,6 +100,7 @@ const ResponseScreen = () => {
           // Start animation immediately
           lottieRef.current?.reset();
           lottieRef.current?.play();
+          setIsPlaying(true);
 
           // Start typing effect immediately
           typingInterval = setInterval(() => {
@@ -140,7 +144,8 @@ const ResponseScreen = () => {
 
           const arrayBuffer = await res.arrayBuffer();
           const base64Audio = Buffer.from(arrayBuffer).toString("base64");
-          const fileUri = FileSystem.documentDirectory + "tts.mp3";
+          const fileUri =
+            FileSystem.documentDirectory + `tts-${Date.now()}.mp3`;
 
           await FileSystem.writeAsStringAsync(fileUri, base64Audio, {
             encoding: FileSystem.EncodingType.Base64,
@@ -151,6 +156,9 @@ const ResponseScreen = () => {
             staysActiveInBackground: false,
             playsInSilentModeIOS: true,
           });
+          if (soundRef.current) {
+            await stopSpeech(); // safety double check
+          }
 
           const { sound } = await Audio.Sound.createAsync({ uri: fileUri });
           soundRef.current = sound;
@@ -159,6 +167,7 @@ const ResponseScreen = () => {
           sound.setOnPlaybackStatusUpdate((status) => {
             if ("didJustFinish" in status && status.didJustFinish && isActive) {
               lottieRef.current?.pause(); // Stop animation when voice ends
+              setIsPlaying(false);
             }
           });
 
