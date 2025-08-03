@@ -37,7 +37,17 @@ const ResponseScreen = () => {
     emotion = "neutral",
   } = useLocalSearchParams<{
     answer: string;
-    selectedLanguage?: "en" | "hi" | "ja" | "bn";
+    selectedLanguage?:
+      | "en"
+      | "hi"
+      | "ja"
+      | "bn"
+      | "ur"
+      | "es"
+      | "zh"
+      | "fr"
+      | "ar"
+      | "pa";
     emotion?: "happy" | "sad" | "angry" | "surprise" | "neutral";
   }>();
 
@@ -49,6 +59,18 @@ const ResponseScreen = () => {
         return "x6hhUN36w6T8JjJp0Y9e"; // Japanese-compatible
       case "bn":
         return "PU9whl7aa1ph79ofu6MV"; // Bengali-compatible
+      case "ur":
+        return "FXYvXDZrVAcrs9xrMNZ1";
+      case "es":
+        return "qtNhzqTIR7tmoc4jNJgI";
+      case "zh":
+        return "h3ZLQyTFFiBGIrQLSHFE";
+      case "fr":
+        return "0vQQ2Mf0iJdS4s7wdVEo";
+      case "ar":
+        return "pc5iVT2XrkXjKOUZTCtd";
+      case "pa":
+        return "wh7t8AeVMlcLNW4IQsyv";
       default:
         return "XCj6y0PF0QVxlEhv3Mzr"; // Dark, masculine
     }

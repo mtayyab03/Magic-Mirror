@@ -37,7 +37,7 @@ const AskMirrorScreen = () => {
   const [isProcessing, setIsProcessing] = useState(false); // 🔄 To track when transcription is in progress
 
   const [selectedLanguage, setSelectedLanguage] = useState<
-    "en" | "hi" | "ja" | "bn"
+    "en" | "hi" | "ja" | "bn" | "ur" | "es" | "zh" | "fr" | "ar" | "pa"
   >("en");
 
   const { playLoopingMusic, stopMusic } = useAudio();
@@ -149,7 +149,21 @@ const AskMirrorScreen = () => {
                     ? "Hindi"
                     : selectedLanguage === "ja"
                     ? "Japanese"
-                    : "Bengali"
+                    : selectedLanguage === "bn"
+                    ? "Bengali"
+                    : selectedLanguage === "ur"
+                    ? "Urdu"
+                    : selectedLanguage === "es"
+                    ? "Spanish"
+                    : selectedLanguage === "zh"
+                    ? "Chinese"
+                    : selectedLanguage === "fr"
+                    ? "French"
+                    : selectedLanguage === "ar"
+                    ? "Arabic"
+                    : selectedLanguage === "pa"
+                    ? "Punjabi"
+                    : "English"
                 }. After the response, on a new line, write the emotion clearly in the format: <emotion: happy> or <emotion: sad>. Valid emotions: happy, sad, angry, surprise, neutral.`,
               },
               {
@@ -285,6 +299,7 @@ const AskMirrorScreen = () => {
               style={{
                 flexDirection: "row",
                 justifyContent: "center",
+                flexWrap: "wrap",
                 gap: 10,
                 marginTop: RFPercentage(4),
               }}
@@ -293,7 +308,13 @@ const AskMirrorScreen = () => {
                 { label: "English", code: "en" },
                 { label: "Hindi", code: "hi" },
                 { label: "Japanese", code: "ja" },
-                { label: "Bangali", code: "bn" },
+                { label: "Bengali", code: "bn" },
+                { label: "Urdu", code: "ur" },
+                { label: "Spanish", code: "es" },
+                { label: "Chinese", code: "zh" },
+                { label: "French", code: "fr" },
+                { label: "Arabic", code: "ar" },
+                { label: "Punjabi", code: "pa" },
               ].map(({ label, code }) => (
                 <TouchableOpacity
                   key={code}
@@ -348,7 +369,7 @@ export default AskMirrorScreen;
 const styles = StyleSheet.create({
   background: {
     width: "100%",
-    height: "78%",
+    height: "85%",
     marginTop: RFPercentage(4),
     alignItems: "center",
     justifyContent: "center",
