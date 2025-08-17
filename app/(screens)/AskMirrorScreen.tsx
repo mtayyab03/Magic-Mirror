@@ -238,6 +238,7 @@ const AskMirrorScreen = () => {
               height: "100%",
               padding: RFPercentage(3),
               paddingVertical: RFPercentage(10),
+
               alignItems: "center",
             }}
           >
@@ -246,6 +247,7 @@ const AskMirrorScreen = () => {
               style={{
                 fontSize: RFPercentage(3),
                 textAlign: "center",
+                marginTop: RFPercentage(3),
               }}
             >
               What would you ask the mirror?
@@ -369,8 +371,8 @@ export default AskMirrorScreen;
 const styles = StyleSheet.create({
   background: {
     width: "100%",
-    height: "85%",
-    marginTop: RFPercentage(4),
+    height: "88%",
+    marginTop: RFPercentage(2),
     alignItems: "center",
     justifyContent: "center",
   },

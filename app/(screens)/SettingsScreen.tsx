@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     flexDirection: "row",
     alignItems: "center",
-    marginTop: RFPercentage(5),
+    marginTop: RFPercentage(6),
   },
   loginbutton: {
     width: "80%",

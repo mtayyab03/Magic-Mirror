@@ -1,9 +1,11 @@
 import { Audio } from "expo-av";
 import * as FileSystem from "expo-file-system";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import { httpsCallable } from "firebase/functions";
 import LottieView from "lottie-react-native"; // ✅ Lottie import
 import React, { useEffect, useRef, useState } from "react";
 import {
+  Alert,
   Animated,
   AppState,
   Easing,
@@ -11,12 +13,17 @@ import {
   SafeAreaView,
   ScrollView,
   StyleSheet,
+  Text,
+  TextInput,
+  ToastAndroid,
   TouchableOpacity,
   View,
 } from "react-native";
+import { functions } from "../../firebaseConfig";
 // componenets
 import { ThemedText } from "@/components/ThemedText";
 import AppButton from "@/components/common/AppButton";
+import AppModal from "@/components/common/AppModal";
 // constants
 import { Buffer } from "buffer";
 import { RFPercentage } from "react-native-responsive-fontsize";
@@ -30,6 +37,46 @@ const ResponseScreen = () => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const lottieRef = useRef<LottieView>(null);
   const soundRef = useRef<Audio.Sound | null>(null);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [selectedReason, setSelectedReason] = useState<string | null>(null);
+  const [description, setDescription] = useState("");
+
+  const reportReasons = [
+    "Hate / Harassment",
+    "Sexual Content",
+    "Violence / Self-harm",
+    "Illegal / Dangerous",
+    "Spam / Scam",
+    "Other (please describe)",
+  ];
+
+  const handleSend = async () => {
+    if (!selectedReason) {
+      alert("Please select a reason");
+      return;
+    }
+
+    try {
+      const sendReportEmail = httpsCallable(functions, "sendReportEmail");
+
+      await sendReportEmail({
+        reason: selectedReason,
+        description,
+      });
+
+      setSelectedReason(null);
+      setDescription("");
+      setIsModalVisible(false);
+
+      if (Platform.OS === "android") {
+        ToastAndroid.show("Thanks—your report was sent.", ToastAndroid.SHORT);
+      } else {
+        Alert.alert("Report Submitted", "Thanks—your report was sent.");
+      }
+    } catch (err) {
+      Alert.alert("Error", "Failed to send report. Please try again.");
+    }
+  };
 
   const {
     answer,
@@ -338,8 +385,72 @@ const ResponseScreen = () => {
               colors={[Colors.primary, "#E9C39A", Colors.primary] as const}
             />
           </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setIsModalVisible(true)}
+            style={styles.loginbutton}
+            activeOpacity={0.7}
+          >
+            <AppButton
+              title={"Report"}
+              colors={[Colors.primary, "#E9C39A", Colors.primary] as const}
+            />
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
+
+      <AppModal
+        modalVisible={isModalVisible}
+        setModalVisible={setIsModalVisible}
+        style={{
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+        RecStyle={{ width: "75%", marginBottom: RFPercentage(6) }}
+      >
+        {/* Reasons */}
+        {reportReasons.map((reason, index) => (
+          <TouchableOpacity
+            key={index}
+            style={styles.reasonOption}
+            onPress={() => setSelectedReason(reason)}
+          >
+            <View
+              style={[
+                styles.radioCircle,
+                selectedReason === reason && styles.radioCircleSelected,
+              ]}
+            />
+            <Text style={styles.reasonText}>{reason}</Text>
+          </TouchableOpacity>
+        ))}
+
+        {/* Description */}
+        <TextInput
+          style={styles.input}
+          placeholder="Add description (optional)"
+          placeholderTextColor="#999"
+          value={description}
+          onChangeText={setDescription}
+          multiline
+        />
+
+        {/* Buttons */}
+        <View style={styles.actions}>
+          <TouchableOpacity
+            style={[styles.actionBtn, styles.cancelBtn]}
+            onPress={() => setIsModalVisible(false)}
+          >
+            <Text style={styles.cancelText}>Cancel</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.actionBtn, styles.sendBtn]}
+            onPress={handleSend}
+          >
+            <Text style={styles.sendText}>Send</Text>
+          </TouchableOpacity>
+        </View>
+      </AppModal>
     </View>
   );
 };
@@ -370,9 +481,74 @@ const styles = StyleSheet.create({
     height: RFPercentage(60),
   },
   loginbutton: {
-    width: "50%",
+    width: "33%",
     justifyContent: "center",
     alignItems: "center",
     marginTop: RFPercentage(1),
+  },
+  modalContent: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 20,
+    width: "90%",
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 15,
+    textAlign: "center",
+  },
+  reasonOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 6,
+  },
+  radioCircle: {
+    height: 18,
+    width: 18,
+    borderRadius: 9,
+    borderWidth: 2,
+    borderColor: Colors.primary,
+    marginRight: 10,
+  },
+  radioCircleSelected: {
+    backgroundColor: Colors.primary,
+  },
+  reasonText: {
+    fontSize: 15,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+    padding: 10,
+    marginTop: 12,
+    minHeight: 60,
+    textAlignVertical: "top",
+  },
+  actions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    marginTop: 15,
+  },
+  actionBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: 8,
+  },
+  cancelBtn: {
+    marginRight: 10,
+    backgroundColor: "#eee",
+  },
+  sendBtn: {
+    backgroundColor: Colors.primary,
+  },
+  cancelText: {
+    color: "#333",
+    fontWeight: "600",
+  },
+  sendText: {
+    color: "#fff",
+    fontWeight: "600",
   },
 });
