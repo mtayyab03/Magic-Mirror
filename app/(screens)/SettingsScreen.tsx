@@ -7,6 +7,7 @@ import {
   Switch,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from "react-native";
 
 // hooks
@@ -26,6 +27,10 @@ const SettingsScreen = () => {
   const router = useRouter();
   const [isEnabledMusic, setIsEnabledMusic] = useState(true);
   const [menuid, setmenuid] = useState(1);
+  const { width } = useWindowDimensions();
+
+  // Decide width based on device size
+  const containerWidth = width > 768 ? "90%" : "100%";
 
   const { playLoopingMusic, stopMusic, musicEnabled, setMusicEnabled } =
     useAudio();
@@ -64,7 +69,7 @@ const SettingsScreen = () => {
       <ImageBackground source={icons.roll} style={styles.background}>
         <View
           style={{
-            width: "100%",
+            width: containerWidth,
             height: "100%",
             padding: RFPercentage(3),
             paddingVertical: RFPercentage(10),
@@ -102,6 +107,7 @@ const SettingsScreen = () => {
               alignItems: "center",
               justifyContent: "space-between",
               marginTop: RFPercentage(4),
+              backgroundColor: "##E9C39A",
             }}
           >
             <ThemedText type="default">Themes</ThemedText>
@@ -197,6 +203,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginTop: RFPercentage(6),
+    backgroundColor: "##E9C39A",
   },
   loginbutton: {
     width: "80%",

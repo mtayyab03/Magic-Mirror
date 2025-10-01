@@ -2,7 +2,7 @@
   "expo": {
     "name": "MagicMirror",
     "slug": "MagicMirror",
-    "version": "1.0.0",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "magicmirror",
@@ -10,17 +10,17 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.tayyabgondal.MagicMirror",
-      "buildNumber": "1"
+      "bundleIdentifier": "com.heraldsquarepsychology.magicmirrorapp",
+      "buildNumber": "3"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#2B1E2E"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.tayyabgondal.MagicMirror",
-      "versionCode": 1
+      "versionCode": 3
     },
     "web": {
       "bundler": "metro",

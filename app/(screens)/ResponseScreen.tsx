@@ -1,7 +1,6 @@
 import { Audio } from "expo-av";
 import * as FileSystem from "expo-file-system";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import { httpsCallable } from "firebase/functions";
 import LottieView from "lottie-react-native"; // ✅ Lottie import
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -19,7 +18,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { functions } from "../../firebaseConfig";
 // componenets
 import { ThemedText } from "@/components/ThemedText";
 import AppButton from "@/components/common/AppButton";
@@ -57,13 +55,13 @@ const ResponseScreen = () => {
     }
 
     try {
-      const sendReportEmail = httpsCallable(functions, "sendReportEmail");
+      // const sendReportEmail = httpsCallable(functions, "sendReportEmail");
 
-      await sendReportEmail({
-        reason: selectedReason,
-        description,
-      });
-
+      // const result = await sendReportEmail({
+      //   reason: selectedReason,
+      //   description,
+      // });
+      // console.log("Function result:", result.data);
       setSelectedReason(null);
       setDescription("");
       setIsModalVisible(false);
@@ -73,8 +71,14 @@ const ResponseScreen = () => {
       } else {
         Alert.alert("Report Submitted", "Thanks—your report was sent.");
       }
-    } catch (err) {
-      Alert.alert("Error", "Failed to send report. Please try again.");
+    } catch (err: any) {
+      console.error("sendReportEmail error:", JSON.stringify(err, null, 2));
+      console.error("Raw error:", err);
+
+      Alert.alert(
+        "Error",
+        err.message || "Failed to send report. Please try again."
+      );
     }
   };
 
