@@ -1,9 +1,8 @@
 import { Feather, FontAwesome } from "@expo/vector-icons";
+import { Audio } from "expo-av";
 import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-
-import { Audio } from "expo-av";
 import {
   ImageBackground,
   Keyboard,
@@ -33,6 +32,7 @@ const AskMirrorScreen = () => {
   const [question, setQuestion] = useState(""); // ✅ State for input
   const router = useRouter();
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  const [isSending, setIsSending] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false); // 🔄 To track when transcription is in progress
 
@@ -48,6 +48,12 @@ const AskMirrorScreen = () => {
       return () => {};
     }, [])
   );
+  useEffect(() => {
+    (async () => {
+      const status = await Audio.getPermissionsAsync();
+      console.log("Current mic permission:", status);
+    })();
+  }, []);
 
   const startRecording = async () => {
     try {
@@ -70,7 +76,7 @@ const AskMirrorScreen = () => {
       console.error("Failed to start recording", err);
     }
   };
-
+  /** Stop recording */
   const stopRecording = async () => {
     try {
       if (!recording) return;
@@ -104,7 +110,7 @@ const AskMirrorScreen = () => {
       const transcribed = data.text;
       setQuestion(transcribed);
 
-      handleSend(transcribed);
+      // handleSend(transcribed);
     } catch (err) {
       console.error("Whisper error:", err);
       alert("Transcription failed.");
@@ -124,10 +130,23 @@ const AskMirrorScreen = () => {
     };
   }, [recording]);
 
+  useEffect(() => {
+    return () => {
+      if (recording) {
+        try {
+          recording.stopAndUnloadAsync();
+        } catch (e) {
+          console.warn("Recording cleanup error", e);
+        }
+      }
+    };
+  }, [recording]);
+
   const handleSend = async (textToSend?: string) => {
+    if (isSending) return; // ⛔ prevent multiple clicks
     const input = textToSend || question;
     if (!input.trim()) return;
-
+    setIsSending(true); // 🟢 lock
     try {
       const response = await fetch(
         "https://api.openai.com/v1/chat/completions",
@@ -206,6 +225,8 @@ const AskMirrorScreen = () => {
     } catch (err) {
       console.error("Fetch Error:", err);
       alert("Network error.");
+    } finally {
+      setIsSending(false); // 🔓 unlock
     }
   };
 
@@ -343,7 +364,9 @@ const AskMirrorScreen = () => {
             </View>
 
             <TouchableOpacity
-              disabled={isRecording || isProcessing || !question.trim()}
+              disabled={
+                isRecording || isProcessing || !question.trim() || isSending
+              }
               onPress={() => handleSend()}
               style={[
                 styles.loginbutton,
@@ -357,7 +380,9 @@ const AskMirrorScreen = () => {
                 end={{ x: 0.5, y: 1 }} // bottom-center
                 style={styles.button}
               >
-                <ThemedText type="button">Send</ThemedText>
+                <ThemedText type="button">
+                  {isSending ? "Sending..." : "Send"}
+                </ThemedText>
               </LinearGradient>
             </TouchableOpacity>
           </View>
