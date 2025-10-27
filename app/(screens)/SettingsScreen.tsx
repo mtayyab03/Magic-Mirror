@@ -1,3 +1,4 @@
+import { MaterialIcons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -9,7 +10,6 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
-
 // hooks
 import { useAudio } from "@/providers/AudioProvider";
 
@@ -26,7 +26,6 @@ import { RFPercentage } from "react-native-responsive-fontsize";
 const SettingsScreen = () => {
   const router = useRouter();
   const [isEnabledMusic, setIsEnabledMusic] = useState(true);
-  const [menuid, setmenuid] = useState(1);
   const { width } = useWindowDimensions();
 
   // Decide width based on device size
@@ -42,20 +41,6 @@ const SettingsScreen = () => {
       }
     }, [musicEnabled]) // 👈 depends on toggle
   );
-  const selectTime = [
-    {
-      id: 1,
-      name: "Mystic",
-    },
-    {
-      id: 2,
-      name: "Dark",
-    },
-    {
-      id: 3,
-      name: "Humorous",
-    },
-  ];
 
   return (
     <ScreenWrapper style={{ alignItems: "center" }}>
@@ -76,17 +61,6 @@ const SettingsScreen = () => {
             alignItems: "center",
           }}
         >
-          <View style={styles.row}>
-            <ThemedText type="default">Voice toggle</ThemedText>
-
-            <Switch
-              value={isEnabledMusic}
-              onValueChange={setIsEnabledMusic}
-              trackColor={{ false: "#767577", true: Colors.purple }}
-              thumbColor={isEnabledMusic ? Colors.white : "#f4f3f4"}
-            />
-          </View>
-
           <View style={[styles.row, { marginTop: RFPercentage(4) }]}>
             <ThemedText type="default">BackgroundMusic toggle</ThemedText>
             <Switch
@@ -99,69 +73,18 @@ const SettingsScreen = () => {
               thumbColor={musicEnabled ? Colors.white : "#f4f3f4"}
             />
           </View>
-
-          <View
-            style={{
-              width: "100%",
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "space-between",
-              marginTop: RFPercentage(4),
-              backgroundColor: "##E9C39A",
-            }}
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => router.push("/SubscriptionScreen")}
+            style={[styles.row, { marginTop: RFPercentage(3) }]}
           >
-            <ThemedText type="default">Themes</ThemedText>
-            <View
-              style={{
-                flexDirection: "row",
-              }}
-            >
-              {selectTime.map((item) => (
-                <TouchableOpacity
-                  activeOpacity={0.7}
-                  onPress={() => setmenuid(item.id)}
-                  key={item.id}
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    marginRight: item.id === 3 ? 0 : RFPercentage(2),
-                  }}
-                >
-                  <View
-                    style={{
-                      width: RFPercentage(1.7),
-                      height: RFPercentage(1.7),
-                      borderWidth: RFPercentage(0.2),
-                      borderColor: Colors.blacky,
-                      borderRadius: RFPercentage(3),
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    {menuid === item.id ? (
-                      <View
-                        style={{
-                          width: RFPercentage(1),
-                          height: RFPercentage(1),
-                          borderRadius: RFPercentage(3),
-                          backgroundColor: Colors.blacky,
-                        }}
-                      />
-                    ) : null}
-                  </View>
-                  <ThemedText
-                    type="default"
-                    style={{
-                      fontSize: RFPercentage(1.8),
-                      marginLeft: RFPercentage(0.7),
-                    }}
-                  >
-                    {item.name}
-                  </ThemedText>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
+            <ThemedText type="default">Subscription</ThemedText>
+            <MaterialIcons
+              color={Colors.lightBlack}
+              size={30}
+              name={"arrow-forward-ios"}
+            />
+          </TouchableOpacity>
 
           {/* buttons */}
           <View style={{ marginTop: RFPercentage(5) }} />
@@ -198,7 +121,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   row: {
-    width: "100%",
+    width: "95%",
     justifyContent: "space-between",
     flexDirection: "row",
     alignItems: "center",

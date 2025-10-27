@@ -46,7 +46,7 @@ export default function SplashScreen() {
 
     // Navigate after 3s
     const timeout = setTimeout(() => {
-      router.push("/HomeScreen");
+      router.push("/LoginScreen");
     }, 5000);
 
     return () => clearTimeout(timeout);

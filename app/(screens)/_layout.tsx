@@ -8,6 +8,12 @@ export default function ScreenLayout() {
       <Stack.Screen name="AskMirrorScreen" options={{ headerShown: false }} />
       <Stack.Screen name="ResponseScreen" options={{ headerShown: false }} />
       <Stack.Screen name="SettingsScreen" options={{ headerShown: false }} />
+      <Stack.Screen name="SignupScreen" options={{ headerShown: false }} />
+      <Stack.Screen name="LoginScreen" options={{ headerShown: false }} />
+      <Stack.Screen
+        name="SubscriptionScreen"
+        options={{ headerShown: false }}
+      />
     </Stack>
   );
 }
