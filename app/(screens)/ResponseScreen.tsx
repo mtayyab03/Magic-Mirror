@@ -1,8 +1,10 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Audio } from "expo-av";
 import * as FileSystem from "expo-file-system";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import LottieView from "lottie-react-native"; // ✅ Lottie import
 import React, { useEffect, useRef, useState } from "react";
+
 import {
   Alert,
   Animated,
@@ -23,6 +25,7 @@ import { ThemedText } from "@/components/ThemedText";
 import AppButton from "@/components/common/AppButton";
 import AppModal from "@/components/common/AppModal";
 // constants
+import { FontFamily } from "@/constants/font";
 import { Buffer } from "buffer";
 import { RFPercentage } from "react-native-responsive-fontsize";
 import { Colors } from "../../constants/Colors";
@@ -30,7 +33,25 @@ global.Buffer = global.Buffer || Buffer;
 
 const ELEVENLABS_API_KEY =
   "sk_a54c3ecf393a06eb066abc38d177bbaa47899466f4c0aa95";
+const OPENAI_API_KEY =
+  "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";
+
+const FREE_LIMIT = 10;
+
+const incrementFreeCount = async () => {
+  const count = parseInt((await AsyncStorage.getItem("freeCount")) || "0");
+  const newCount = count + 1;
+  await AsyncStorage.setItem("freeCount", newCount.toString());
+  return newCount;
+};
+
+const getFreeCount = async () => {
+  return parseInt((await AsyncStorage.getItem("freeCount")) || "0");
+};
+
 const ResponseScreen = () => {
+  const [loading, setLoading] = useState(false);
+  const [remaining, setRemaining] = useState(FREE_LIMIT);
   const router = useRouter();
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const lottieRef = useRef<LottieView>(null);
@@ -38,50 +59,6 @@ const ResponseScreen = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [selectedReason, setSelectedReason] = useState<string | null>(null);
   const [description, setDescription] = useState("");
-
-  const reportReasons = [
-    "Hate / Harassment",
-    "Sexual Content",
-    "Violence / Self-harm",
-    "Illegal / Dangerous",
-    "Spam / Scam",
-    "Other (please describe)",
-  ];
-
-  const handleSend = async () => {
-    if (!selectedReason) {
-      alert("Please select a reason");
-      return;
-    }
-
-    try {
-      // const sendReportEmail = httpsCallable(functions, "sendReportEmail");
-
-      // const result = await sendReportEmail({
-      //   reason: selectedReason,
-      //   description,
-      // });
-      // console.log("Function result:", result.data);
-      setSelectedReason(null);
-      setDescription("");
-      setIsModalVisible(false);
-
-      if (Platform.OS === "android") {
-        ToastAndroid.show("Thanks—your report was sent.", ToastAndroid.SHORT);
-      } else {
-        Alert.alert("Report Submitted", "Thanks—your report was sent.");
-      }
-    } catch (err: any) {
-      console.error("sendReportEmail error:", JSON.stringify(err, null, 2));
-      console.error("Raw error:", err);
-
-      Alert.alert(
-        "Error",
-        err.message || "Failed to send report. Please try again."
-      );
-    }
-  };
-
   const {
     answer,
     selectedLanguage = "en",
@@ -101,6 +78,49 @@ const ResponseScreen = () => {
       | "pa";
     emotion?: "happy" | "sad" | "angry" | "surprise" | "neutral";
   }>();
+
+  const reportReasons = [
+    "Hate / Harassment",
+    "Sexual Content",
+    "Violence / Self-harm",
+    "Illegal / Dangerous",
+    "Spam / Scam",
+    "Other (please describe)",
+  ];
+  useEffect(() => {
+    const fetchCount = async () => {
+      const used = await getFreeCount();
+      setRemaining(FREE_LIMIT - used);
+    };
+    fetchCount();
+  }, []);
+
+  const handleSend = async () => {
+    if (!selectedReason) {
+      alert("Please select a reason");
+      return;
+    }
+
+    try {
+      setSelectedReason(null);
+      setDescription("");
+      setIsModalVisible(false);
+
+      if (Platform.OS === "android") {
+        ToastAndroid.show("Thanks—your report was sent.", ToastAndroid.SHORT);
+      } else {
+        Alert.alert("Report Submitted", "Thanks—your report was sent.");
+      }
+    } catch (err: any) {
+      console.error("sendReportEmail error:", JSON.stringify(err, null, 2));
+      console.error("Raw error:", err);
+
+      Alert.alert(
+        "Error",
+        err.message || "Failed to send report. Please try again."
+      );
+    }
+  };
 
   const getVoiceId = (lang: string) => {
     switch (lang) {
@@ -129,6 +149,7 @@ const ResponseScreen = () => {
 
   const [displayedText, setDisplayedText] = useState("");
   const [isPlaying, setIsPlaying] = useState(false);
+  const [continueModal, setContinueModal] = useState(false);
 
   // Cleanup on background
   useEffect(() => {
@@ -153,110 +174,92 @@ const ResponseScreen = () => {
     lottieRef.current?.pause();
   };
 
+  const playResponse = async (text: string, lang: string) => {
+    try {
+      await stopSpeech();
+      setDisplayedText("");
+
+      const words = text.trim().split(/\s+/);
+      const VOICE_ID = getVoiceId(lang);
+
+      // Start animation
+      lottieRef.current?.reset();
+      lottieRef.current?.play();
+      setIsPlaying(true);
+
+      // Typing effect
+      let index = 0;
+      const typingInterval = setInterval(() => {
+        if (index < words.length) {
+          setDisplayedText((prev) => prev + words[index++] + " ");
+        } else {
+          clearInterval(typingInterval);
+        }
+      }, 400);
+
+      // Fetch TTS audio
+      const res = await fetch(
+        `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`,
+        {
+          method: "POST",
+          headers: {
+            "xi-api-key": ELEVENLABS_API_KEY,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            text,
+            voice_settings: {
+              stability: 0.1,
+              similarity_boost: 0.7,
+              style: 0.8,
+              use_speaker_boost: true,
+            },
+          }),
+        }
+      );
+
+      if (!res.ok) {
+        console.error("TTS failed:", await res.text());
+        throw new Error("TTS failed");
+      }
+
+      const arrayBuffer = await res.arrayBuffer();
+      const base64Audio = Buffer.from(arrayBuffer).toString("base64");
+      const fileUri = FileSystem.documentDirectory + `tts-${Date.now()}.mp3`;
+      await FileSystem.writeAsStringAsync(fileUri, base64Audio, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        staysActiveInBackground: false,
+        playsInSilentModeIOS: true,
+      });
+
+      const { sound } = await Audio.Sound.createAsync({ uri: fileUri });
+      soundRef.current = sound;
+
+      await sound.setRateAsync(0.9, true);
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if ("didJustFinish" in status && status.didJustFinish) {
+          lottieRef.current?.pause();
+          setIsPlaying(false);
+          setTimeout(() => setContinueModal(true), 1000);
+        }
+      });
+
+      await sound.playAsync();
+    } catch (err) {
+      console.error("playResponse error:", err);
+    }
+  };
+
   useFocusEffect(
     React.useCallback(() => {
-      if (!answer || typeof answer !== "string") return;
-
-      let isActive = true;
-      let index = 0;
-      let typingInterval: number | null = null;
-      const words = (answer || "").trim().split(/\s+/);
-      const VOICE_ID = getVoiceId(selectedLanguage);
-
-      const playResponse = async () => {
-        if (!answer || typeof answer !== "string") return;
-        try {
-          await stopSpeech(); // Cleanup
-
-          setDisplayedText(""); // Reset text
-
-          // Start animation immediately
-          lottieRef.current?.reset();
-          lottieRef.current?.play();
-          setIsPlaying(true);
-
-          // Start typing effect immediately
-          typingInterval = setInterval(() => {
-            if (!isActive) {
-              clearInterval(typingInterval!);
-              return;
-            }
-            if (index < words.length) {
-              setDisplayedText((prev) => prev + words[index++] + " ");
-            } else {
-              clearInterval(typingInterval!);
-            }
-          }, 400);
-
-          // Now begin fetching ElevenLabs audio in background
-          const res = await fetch(
-            `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`,
-            {
-              method: "POST",
-              headers: {
-                "xi-api-key": ELEVENLABS_API_KEY,
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                text: answer,
-                voice_settings: {
-                  stability: 0.1,
-                  similarity_boost: 0.7,
-                  style: 0.8,
-                  use_speaker_boost: true,
-                },
-              }),
-            }
-          );
-
-          if (!res.ok) {
-            const errorText = await res.text();
-            console.error("TTS failed:", res.status, errorText);
-            throw new Error("TTS API call failed");
-          }
-
-          const arrayBuffer = await res.arrayBuffer();
-          const base64Audio = Buffer.from(arrayBuffer).toString("base64");
-          const fileUri =
-            FileSystem.documentDirectory + `tts-${Date.now()}.mp3`;
-
-          await FileSystem.writeAsStringAsync(fileUri, base64Audio, {
-            encoding: FileSystem.EncodingType.Base64,
-          });
-
-          await Audio.setAudioModeAsync({
-            allowsRecordingIOS: false,
-            staysActiveInBackground: false,
-            playsInSilentModeIOS: true,
-          });
-          if (soundRef.current) {
-            await stopSpeech(); // safety double check
-          }
-
-          const { sound } = await Audio.Sound.createAsync({ uri: fileUri });
-          soundRef.current = sound;
-
-          await sound.setRateAsync(0.9, true); // Slower playback
-          sound.setOnPlaybackStatusUpdate((status) => {
-            if ("didJustFinish" in status && status.didJustFinish && isActive) {
-              lottieRef.current?.pause(); // Stop animation when voice ends
-              setIsPlaying(false);
-            }
-          });
-
-          await sound.playAsync(); // Play voice
-        } catch (err) {
-          console.warn("TTS error:", err);
-        }
-      };
-
-      playResponse();
-
-      return () => {
-        isActive = false;
-        if (typingInterval) clearInterval(typingInterval);
-        stopSpeech();
-      };
+      if (answer && typeof answer === "string") {
+        playResponse(answer, selectedLanguage);
+      }
+      return stopSpeech;
     }, [answer])
   );
 
@@ -284,7 +287,84 @@ const ResponseScreen = () => {
     setDisplayedText("");
     router.replace("/AskMirrorScreen");
   };
+  const handleYes = async () => {
+    const used = await getFreeCount();
 
+    // 🟡 Check limit
+    if (used >= FREE_LIMIT) {
+      Alert.alert(
+        "Limit Reached",
+        "You’ve used your 3 free questions. Subscribe to reveal more mysteries.",
+        [
+          // { text: "Buy one", onPress: () => purchaseOneQuestion() },
+          { text: "Buy one", onPress: () => setContinueModal(false) },
+          { text: "Not Now", onPress: () => setContinueModal(false) },
+          {
+            text: "Subscribe",
+            onPress: () => {
+              setContinueModal(false); // 👈 close modal first
+              router.push("/SubscriptionScreen");
+            },
+          },
+        ]
+      );
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const response = await fetch(
+        "https://api.openai.com/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${OPENAI_API_KEY}`,
+          },
+          body: JSON.stringify({
+            model: "gpt-3.5-turbo",
+            messages: [
+              {
+                role: "system",
+                content: `You are a mystical fortune teller. Continue your previous prophecy in the same tone. Respond briefly in ${selectedLanguage}. After the response, write emotion as <emotion: happy/sad/...>.`,
+              },
+              { role: "user", content: "Yes, tell me more." },
+            ],
+          }),
+        }
+      );
+
+      const data = await response.json();
+      const newText = data.choices?.[0]?.message?.content || "";
+
+      // ✅ Increment usage count
+      const newCount = await incrementFreeCount();
+      setRemaining(FREE_LIMIT - newCount);
+
+      // ✅ Stop any old playback
+      await stopSpeech();
+      setDisplayedText("");
+
+      // ✅ Update text after small delay
+      setTimeout(() => {
+        setDisplayedText(newText);
+        setContinueModal(false);
+        playResponse(newText, selectedLanguage);
+      }, 400);
+    } catch (err) {
+      console.error("Continuation error:", err);
+      Alert.alert("Error", "Could not continue the prophecy.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleNo = async () => {
+    await stopSpeech();
+    setDisplayedText("");
+    router.replace("/AskMirrorScreen");
+  };
   return (
     <View style={styles.background}>
       <SafeAreaView style={styles.safeArea}>
@@ -452,6 +532,69 @@ const ResponseScreen = () => {
             onPress={handleSend}
           >
             <Text style={styles.sendText}>Send</Text>
+          </TouchableOpacity>
+        </View>
+      </AppModal>
+
+      <AppModal
+        modalVisible={continueModal}
+        setModalVisible={setContinueModal}
+        style={{
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+        RecStyle={{
+          width: "80%",
+          marginBottom: RFPercentage(6),
+          alignItems: "center",
+          backgroundColor: Colors.primary,
+        }}
+      >
+        <ThemedText
+          type="default"
+          style={{
+            fontSize: RFPercentage(3),
+            textAlign: "center",
+            marginBottom: RFPercentage(2),
+            color: Colors.white,
+            fontFamily: FontFamily.Bold,
+          }}
+        >
+          Would you like to know more?
+        </ThemedText>
+
+        <View
+          style={{
+            width: "100%",
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-around",
+            marginTop: RFPercentage(1),
+          }}
+        >
+          {/* YES */}
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={handleYes}
+            style={{ opacity: loading ? 0.6 : 1, width: "45%" }}
+            disabled={loading}
+          >
+            <AppButton
+              title={loading ? "..." : "Yes"}
+              colors={[Colors.purple, "#DB90DD", Colors.purple] as const}
+            />
+          </TouchableOpacity>
+
+          {/* NO */}
+          <TouchableOpacity
+            style={{ opacity: loading ? 0.6 : 1, width: "45%" }}
+            activeOpacity={0.8}
+            onPress={handleNo}
+          >
+            <AppButton
+              title={"No"}
+              colors={[Colors.purple, "#DB90DD", Colors.purple] as const}
+            />
           </TouchableOpacity>
         </View>
       </AppModal>

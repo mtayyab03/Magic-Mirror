@@ -16,6 +16,7 @@ import {
 // componenets
 import ScreenWrapper from "@/components/Specific/ScreenWrapper";
 import { ThemedText } from "@/components/ThemedText";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { RFPercentage } from "react-native-responsive-fontsize";
 
 // hooks
@@ -25,16 +26,45 @@ import { Colors } from "@/constants/Colors";
 import { FontFamily } from "@/constants/font";
 import icons from "@/constants/icons";
 
+// 🟢 Free Question Limit
+const FREE_LIMIT = 10;
+
+// 🔹 AsyncStorage Helpers
+const incrementFreeCount = async () => {
+  const count = parseInt((await AsyncStorage.getItem("freeCount")) || "0");
+  const newCount = count + 1;
+  await AsyncStorage.setItem("freeCount", newCount.toString());
+  return newCount;
+};
+
+const getFreeCount = async () => {
+  const count = parseInt((await AsyncStorage.getItem("freeCount")) || "0");
+  return count;
+};
+
+const resetFreeCount = async () => {
+  await AsyncStorage.setItem("freeCount", "0");
+};
+
 const OPENAI_API_KEY =
   "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";
 
 const AskMirrorScreen = () => {
   const [question, setQuestion] = useState(""); // ✅ State for input
+  const [remaining, setRemaining] = useState(FREE_LIMIT);
   const router = useRouter();
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false); // 🔄 To track when transcription is in progress
+  // 🔹 Load Remaining Free Questions
+  useEffect(() => {
+    const fetchCount = async () => {
+      const used = await getFreeCount();
+      setRemaining(FREE_LIMIT - used);
+    };
+    fetchCount();
+  }, []);
 
   const [selectedLanguage, setSelectedLanguage] = useState<
     "en" | "hi" | "ja" | "bn" | "ur" | "es" | "zh" | "fr" | "ar" | "pa"
@@ -146,6 +176,12 @@ const AskMirrorScreen = () => {
     if (isSending) return; // ⛔ prevent multiple clicks
     const input = textToSend || question;
     if (!input.trim()) return;
+    // 🔸 Check if free limit reached
+    const usedCount = await getFreeCount();
+    if (usedCount >= FREE_LIMIT) {
+      router.push("/SubscriptionScreen");
+      return;
+    }
     setIsSending(true); // 🟢 lock
     try {
       const response = await fetch(
@@ -209,6 +245,9 @@ const AskMirrorScreen = () => {
         const emotionLabel = validEmotions.includes(emotion)
           ? emotion
           : "neutral";
+        const newCount = await incrementFreeCount();
+        setRemaining(FREE_LIMIT - newCount);
+
         stopMusic(); // 👈 Stop background music
         router.push({
           pathname: "/ResponseScreen",
@@ -385,6 +424,21 @@ const AskMirrorScreen = () => {
                 </ThemedText>
               </LinearGradient>
             </TouchableOpacity>
+
+            {/* Remaining Free Questions */}
+            <View style={{ marginTop: 15, alignItems: "center" }}>
+              <ThemedText
+                style={{
+                  color: Colors.primary,
+                  fontSize: 14,
+                  fontFamily: FontFamily.Bold,
+                }}
+              >
+                {remaining > 0
+                  ? `${remaining} free questions left`
+                  : "Free limit reached — upgrade to continue"}
+              </ThemedText>
+            </View>
           </View>
         </TouchableWithoutFeedback>
       </ImageBackground>

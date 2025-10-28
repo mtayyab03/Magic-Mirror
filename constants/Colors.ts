@@ -31,4 +31,5 @@ export const Colors = {
   white: "#FAFAFA",
   blacky: "#000000",
   lightBlack: "#353535",
+  red: "#ff0000",
 };

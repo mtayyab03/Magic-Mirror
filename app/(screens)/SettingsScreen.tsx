@@ -105,6 +105,16 @@ const SettingsScreen = () => {
               colors={[Colors.purple, "#DB90DD", Colors.purple] as const}
             />
           </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.loginbutton}
+            activeOpacity={0.7}
+            onPress={() => router.push("/LoginScreen")}
+          >
+            <AppButton
+              title={"Logout"}
+              colors={[Colors.white, Colors.white, Colors.white] as const}
+            />
+          </TouchableOpacity>
         </View>
       </ImageBackground>
     </ScreenWrapper>
