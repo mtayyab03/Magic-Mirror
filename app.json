@@ -2,7 +2,7 @@
   "expo": {
     "name": "MagicMirror",
     "slug": "MagicMirror",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "magicmirror",
@@ -17,13 +17,14 @@
       }
     },
     "android": {
+      "permissions": ["com.android.vending.BILLING"],
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#2B1E2E"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.tayyabgondal.MagicMirror",
-      "versionCode": 4
+      "versionCode": 5
     },
     "web": {
       "bundler": "metro",
