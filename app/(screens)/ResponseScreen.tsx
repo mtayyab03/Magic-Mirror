@@ -1,10 +1,14 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Audio } from "expo-av";
 import * as FileSystem from "expo-file-system";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import LottieView from "lottie-react-native"; // ✅ Lottie import
 import React, { useEffect, useRef, useState } from "react";
 
+import {
+  getAuth,
+  getFreeCount,
+  incrementFreeCount,
+} from "@/providers/authStorage";
 import {
   Alert,
   Animated,
@@ -37,17 +41,6 @@ const OPENAI_API_KEY =
   "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";
 
 const FREE_LIMIT = 10;
-
-const incrementFreeCount = async () => {
-  const count = parseInt((await AsyncStorage.getItem("freeCount")) || "0");
-  const newCount = count + 1;
-  await AsyncStorage.setItem("freeCount", newCount.toString());
-  return newCount;
-};
-
-const getFreeCount = async () => {
-  return parseInt((await AsyncStorage.getItem("freeCount")) || "0");
-};
 
 const ResponseScreen = () => {
   const [loading, setLoading] = useState(false);
@@ -88,13 +81,12 @@ const ResponseScreen = () => {
     "Other (please describe)",
   ];
   useEffect(() => {
-    const fetchCount = async () => {
+    const fetchRemaining = async () => {
       const used = await getFreeCount();
       setRemaining(FREE_LIMIT - used);
     };
-    fetchCount();
+    fetchRemaining();
   }, []);
-
   const handleSend = async () => {
     if (!selectedReason) {
       alert("Please select a reason");
@@ -288,21 +280,24 @@ const ResponseScreen = () => {
     router.replace("/AskMirrorScreen");
   };
   const handleYes = async () => {
-    const used = await getFreeCount();
+    const authData = await getAuth();
+    if (!authData.token) {
+      router.replace("/(screens)/LoginScreen");
+      return;
+    }
 
-    // 🟡 Check limit
+    const used = await getFreeCount();
     if (used >= FREE_LIMIT) {
       Alert.alert(
         "Limit Reached",
-        "You’ve used your 3 free questions. Subscribe to reveal more mysteries.",
+        "You’ve used your free questions. Subscribe to reveal more mysteries.",
         [
-          // { text: "Buy one", onPress: () => purchaseOneQuestion() },
           { text: "Buy one", onPress: () => setContinueModal(false) },
           { text: "Not Now", onPress: () => setContinueModal(false) },
           {
             text: "Subscribe",
             onPress: () => {
-              setContinueModal(false); // 👈 close modal first
+              setContinueModal(false);
               router.push("/SubscriptionScreen");
             },
           },

@@ -1,5 +1,7 @@
+import { auth } from "@/firebaseConfig";
 import { Fontisto, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { createUserWithEmailAndPassword } from "firebase/auth";
 import { Formik, FormikHelpers } from "formik";
 import React, { useState } from "react";
 import {
@@ -66,12 +68,14 @@ export default function SignupScreen(props: SignupScreenProps) {
   ) => {
     setLoading(true);
     try {
-      // Simulate signup success
-      router.push("/(screens)/LoginScreen");
+      await createUserWithEmailAndPassword(auth, values.email, values.password);
+      Alert.alert("Success", "Account created successfully!");
+      router.push("/LoginScreen");
+    } catch (error: any) {
+      console.log("Signup error:", error);
+      Alert.alert("Signup Failed", error.message || "Please try again.");
+    } finally {
       setLoading(false);
-    } catch (error) {
-      setLoading(false);
-      Alert.alert("Signup Failed", "Please check your details and try again.");
     }
   };
 
@@ -229,27 +233,27 @@ export default function SignupScreen(props: SignupScreenProps) {
           flexDirection: "row",
           alignItems: "flex-end",
           flex: 1,
-          marginBottom: RFPercentage(3),
+          marginBottom: RFPercentage(12),
         }}
       >
         <Text
           style={{
             color: Colors.white,
             fontFamily: FontFamily.Regular,
-            fontSize: RFPercentage(1.5),
+            fontSize: RFPercentage(2.5),
           }}
         >
           Already have an account?
         </Text>
         <TouchableOpacity
-          onPress={() => router.push("/(screens)/LoginScreen")}
+          onPress={() => router.push("/LoginScreen")}
           activeOpacity={0.7}
         >
           <Text
             style={{
               color: Colors.primary,
               fontFamily: FontFamily.Bold,
-              fontSize: RFPercentage(1.5),
+              fontSize: RFPercentage(2.5),
             }}
           >
             Login
@@ -277,7 +281,7 @@ const styles = StyleSheet.create({
   logocontainer: {
     alignItems: "center",
     justifyContent: "center",
-    marginTop: RFPercentage(5),
+    marginTop: RFPercentage(12),
   },
   logo: {
     width: RFPercentage(15),

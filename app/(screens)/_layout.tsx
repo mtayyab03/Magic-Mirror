@@ -3,15 +3,36 @@ import { Stack } from "expo-router";
 export default function ScreenLayout() {
   return (
     <Stack>
-      <Stack.Screen name="SplashScreen" options={{ headerShown: false }} />
-      <Stack.Screen name="HomeScreen" options={{ headerShown: false }} />
-      <Stack.Screen name="AskMirrorScreen" options={{ headerShown: false }} />
-      <Stack.Screen name="ResponseScreen" options={{ headerShown: false }} />
-      <Stack.Screen name="SettingsScreen" options={{ headerShown: false }} />
-      <Stack.Screen name="SignupScreen" options={{ headerShown: false }} />
-      <Stack.Screen name="LoginScreen" options={{ headerShown: false }} />
       <Stack.Screen
-        name="SubscriptionScreen"
+        name="(screens)/SplashScreen"
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="(screens)/HomeScreen"
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="(screens)/AskMirrorScreen"
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="(screens)/ResponseScreen"
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="(screens)/SettingsScreen"
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="(screens)/SignupScreen"
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="(screens)/LoginScreen"
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="(screens)/SubscriptionScreen"
         options={{ headerShown: false }}
       />
     </Stack>

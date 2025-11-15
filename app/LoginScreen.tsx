@@ -18,6 +18,11 @@ import * as yup from "yup";
 import AppButton from "@/components/common/AppButton";
 import ScreenWrapper from "@/components/Specific/ScreenWrapper";
 
+// firebase
+import { auth } from "@/firebaseConfig";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { signInWithEmailAndPassword } from "firebase/auth";
+
 // constants
 import { Colors } from "@/constants/Colors";
 import { FontFamily } from "@/constants/font";
@@ -60,14 +65,20 @@ export default function LoginScreen(props: LoginScreenProps) {
   ) => {
     setLoading(true);
     try {
-      // Navigate to BottomTab screen on success
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        values.email,
+        values.password
+      );
+
+      const token = await userCredential.user.getIdToken();
+      await AsyncStorage.setItem("userToken", token);
 
       router.replace("/(screens)/HomeScreen");
-
-      setLoading(false);
     } catch (error) {
-      setLoading(false);
       Alert.alert("Login Failed", "Please check your email and password.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -189,27 +200,27 @@ export default function LoginScreen(props: LoginScreenProps) {
           flexDirection: "row",
           alignItems: "flex-end",
           flex: 1,
-          marginBottom: RFPercentage(3),
+          marginBottom: RFPercentage(12),
         }}
       >
         <Text
           style={{
             color: Colors.white,
             fontFamily: FontFamily.Regular,
-            fontSize: RFPercentage(1.5),
+            fontSize: RFPercentage(2.5),
           }}
         >
           Don’t have an account ?
         </Text>
         <TouchableOpacity
-          onPress={() => router.push("/(screens)/SignupScreen")}
+          onPress={() => router.push("/SignupScreen")}
           activeOpacity={0.7}
         >
           <Text
             style={{
               color: Colors.primary,
               fontFamily: FontFamily.Bold,
-              fontSize: RFPercentage(1.5),
+              fontSize: RFPercentage(2.5),
             }}
           >
             Sign up

@@ -16,42 +16,28 @@ import {
 // componenets
 import ScreenWrapper from "@/components/Specific/ScreenWrapper";
 import { ThemedText } from "@/components/ThemedText";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { RFPercentage } from "react-native-responsive-fontsize";
 
 // hooks
 import { useAudio } from "@/providers/AudioProvider";
+import {
+  getAuth,
+  getFreeCount,
+  incrementFreeCount,
+} from "@/providers/authStorage";
 
 import { Colors } from "@/constants/Colors";
 import { FontFamily } from "@/constants/font";
 import icons from "@/constants/icons";
 
-// 🟢 Free Question Limit
-const FREE_LIMIT = 10;
-
-// 🔹 AsyncStorage Helpers
-const incrementFreeCount = async () => {
-  const count = parseInt((await AsyncStorage.getItem("freeCount")) || "0");
-  const newCount = count + 1;
-  await AsyncStorage.setItem("freeCount", newCount.toString());
-  return newCount;
-};
-
-const getFreeCount = async () => {
-  const count = parseInt((await AsyncStorage.getItem("freeCount")) || "0");
-  return count;
-};
-
-const resetFreeCount = async () => {
-  await AsyncStorage.setItem("freeCount", "0");
-};
-
 const OPENAI_API_KEY =
   "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";
 
 const AskMirrorScreen = () => {
+  const [token, setToken] = useState<string | null>(null);
+  const [uid, setUid] = useState<string | null>(null);
+  const [remaining, setRemaining] = useState(5); // FREE_LIMIT
   const [question, setQuestion] = useState(""); // ✅ State for input
-  const [remaining, setRemaining] = useState(FREE_LIMIT);
   const router = useRouter();
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [isSending, setIsSending] = useState(false);
@@ -59,11 +45,20 @@ const AskMirrorScreen = () => {
   const [isProcessing, setIsProcessing] = useState(false); // 🔄 To track when transcription is in progress
   // 🔹 Load Remaining Free Questions
   useEffect(() => {
-    const fetchCount = async () => {
-      const used = await getFreeCount();
-      setRemaining(FREE_LIMIT - used);
+    const init = async () => {
+      const authData = await getAuth();
+      if (!authData.token || !authData.uid) {
+        // redirect to login if not logged in
+        router.replace("/LoginScreen");
+        return;
+      }
+      setToken(authData.token);
+      setUid(authData.uid);
+
+      const usedCount = await getFreeCount();
+      setRemaining(5 - usedCount); // 10 is FREE_LIMIT
     };
-    fetchCount();
+    init();
   }, []);
 
   const [selectedLanguage, setSelectedLanguage] = useState<
@@ -148,17 +143,6 @@ const AskMirrorScreen = () => {
       setIsProcessing(false); // End processing
     }
   };
-  useEffect(() => {
-    return () => {
-      if (recording) {
-        try {
-          recording.stopAndUnloadAsync();
-        } catch (e) {
-          console.warn("Recording cleanup error", e);
-        }
-      }
-    };
-  }, [recording]);
 
   useEffect(() => {
     return () => {
@@ -177,11 +161,20 @@ const AskMirrorScreen = () => {
     const input = textToSend || question;
     if (!input.trim()) return;
     // 🔸 Check if free limit reached
+    if (!token || !uid) {
+      router.replace("/LoginScreen");
+      return;
+    }
+
     const usedCount = await getFreeCount();
-    if (usedCount >= FREE_LIMIT) {
+    if (usedCount >= 10) {
       router.push("/SubscriptionScreen");
       return;
     }
+
+    // increment usage
+    const newCount = await incrementFreeCount();
+    setRemaining(10 - newCount);
     setIsSending(true); // 🟢 lock
     try {
       const response = await fetch(
@@ -245,8 +238,6 @@ const AskMirrorScreen = () => {
         const emotionLabel = validEmotions.includes(emotion)
           ? emotion
           : "neutral";
-        const newCount = await incrementFreeCount();
-        setRemaining(FREE_LIMIT - newCount);
 
         stopMusic(); // 👈 Stop background music
         router.push({

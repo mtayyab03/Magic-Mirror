@@ -1,6 +1,8 @@
 import { initializeApp } from "firebase/app";
+import { getAuth } from "firebase/auth";
 import { getFunctions } from "firebase/functions";
 
+// 🔥 Your Firebase web config
 const firebaseConfig = {
   apiKey: "AIzaSyAeB6iyqABbGiX4lK7OqPwoLbfw93RmxYA",
   authDomain: "magicmirror-3e2f7.firebaseapp.com",
@@ -11,6 +13,11 @@ const firebaseConfig = {
   measurementId: "G-0360Q6RD6W",
 };
 
-export const app = initializeApp(firebaseConfig);
+// Initialize Firebase app
+const app = initializeApp(firebaseConfig);
+
+// Initialize Firebase services
+export const auth = getAuth(app);
 export const functions = getFunctions(app);
-export default firebaseConfig;
+
+export default app;
