@@ -1,11 +1,21 @@
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React from "react";
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React, { useEffect, useState } from "react";
+import {
+  Alert,
+  Image,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { useIAP, type Purchase } from "react-native-iap";
 import { RFPercentage } from "react-native-responsive-fontsize";
 
 // Components
 import ScreenWrapper from "@/components/Specific/ScreenWrapper";
+import { saveSubscriptionStatus } from "@/providers/authStorage";
 
 // constants
 import { Colors } from "@/constants/Colors";
@@ -13,8 +23,57 @@ import { FontFamily } from "@/constants/font";
 import { fontSize } from "@/constants/fontUtils";
 import icons from "@/constants/icons";
 
+const productSkus = ["basic_plan_id", "silver_plan_id"]; // your real SKUs
+type Product = {
+  title: string;
+  description: string;
+  price: string;
+  localizedPrice: string;
+  currency: string;
+  productId: string; // iOS/Android product identifier
+};
+
 const SubscriptionScreen = () => {
   const router = useRouter();
+  const [products, setProducts] = useState<any[]>([]);
+
+  const { connected, fetchProducts, requestPurchase, finishTransaction } =
+    useIAP({
+      onPurchaseError: (error) => {
+        console.error("Purchase error", error);
+        Alert.alert("Purchase failed", error.message);
+      },
+      onPurchaseSuccess: async (purchase: Purchase) => {
+        const receipt =
+          Platform.OS === "ios"
+            ? (purchase as any).transactionReceipt
+            : purchase.purchaseToken;
+
+        if (!receipt) {
+          Alert.alert("Error", "No receipt found");
+          return;
+        }
+
+        try {
+          await finishTransaction({ purchase, isConsumable: false });
+          await saveSubscriptionStatus(true);
+          Alert.alert("Success", "Subscription activated!");
+          router.replace("/HomeScreen");
+        } catch (err) {
+          console.error("Finish transaction error:", err);
+          Alert.alert("Error", "Failed to finalize purchase");
+        }
+      },
+    });
+
+  useEffect(() => {
+    if (connected) {
+      fetchProducts({ skus: productSkus, type: "subs" }).then((items) => {
+        setProducts(items ?? []);
+      });
+    }
+  }, [connected]);
+
   const plans = [
     {
       id: 1,
@@ -22,22 +81,33 @@ const SubscriptionScreen = () => {
       price: "$0.00",
       description: "3 free questions/day",
       buttonText: "Free",
+      isPaid: false,
     },
     {
       id: 2,
       name: "Silver Plan",
-      price: "$3.99",
-      description: "Monthly limited access",
-      buttonText: "Paid",
-    },
-    {
-      id: 3,
-      name: "Diamond Plan",
-      price: "$9.99",
-      description: "Yearly unlimited access",
-      buttonText: "Paid",
+      price: "$3.99 / month",
+      description: "Unlimited access",
+      buttonText: "Subscribe",
+      isPaid: true,
     },
   ];
+
+  const handlePurchasePress = async (productId: string | undefined) => {
+    if (!productId) {
+      Alert.alert("Error", "Product ID not found");
+      return;
+    }
+
+    try {
+      const purchase = await requestPurchase(productId as any); // true auto-finishes iOS transaction
+      console.log("Purchase requested:", purchase);
+    } catch (err: any) {
+      console.log("Purchase request error:", err);
+      Alert.alert("Payment failed", err.message || "Try again.");
+    }
+  };
+
   return (
     <ScreenWrapper style={styles.customBackground}>
       <View
@@ -56,6 +126,7 @@ const SubscriptionScreen = () => {
           <Feather color={Colors.primary} size={40} name={"arrow-left"} />
         </TouchableOpacity>
       </View>
+
       <View style={styles.logocontainer}>
         <Image
           style={{ width: fontSize(100), height: fontSize(100) }}
@@ -64,42 +135,53 @@ const SubscriptionScreen = () => {
         <Text style={styles.HeadingText}>Subscriptions</Text>
       </View>
 
-      {plans.map((plan) => (
-        <View key={plan.id} style={styles.container}>
-          <View>
-            <Text style={styles.titleText}>{plan.name}</Text>
-            <Text style={styles.priceText}>{plan.price}</Text>
+      {plans.map((plan) => {
+        const product = products.find((p) =>
+          (p as Product).productId.includes("silver")
+        );
+        handlePurchasePress((product as Product).productId);
+        return (
+          <View key={plan.id} style={styles.container}>
+            <View>
+              <Text style={styles.titleText}>{plan.name}</Text>
+              <Text style={styles.priceText}>{plan.price}</Text>
+              <View style={styles.dotContainer}>
+                <View style={styles.dot} />
+                <Text style={styles.subtitleText}>{plan.description}</Text>
+              </View>
 
-            <View style={styles.dotContainer}>
-              <View style={styles.dot} />
-              <Text style={styles.subtitleText}>{plan.description}</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  if (plan.isPaid) {
+                    const product = products.find((p: any) =>
+                      (p as any).productId?.includes("silver")
+                    );
+                    handlePurchasePress((product as any)?.productId);
+                  } else {
+                    router.replace("/HomeScreen");
+                  }
+                }}
+                style={styles.buttonContainer}
+              >
+                <Text
+                  style={[styles.subtitleText, { color: Colors.lightBlack }]}
+                >
+                  {plan.buttonText}
+                </Text>
+              </TouchableOpacity>
             </View>
-
-            <View style={styles.buttonContainer}>
-              <Text style={[styles.subtitleText, { color: Colors.lightBlack }]}>
-                {plan.buttonText}
-              </Text>
-            </View>
+            <Ionicons color={Colors.white} size={80} name={"diamond-outline"} />
           </View>
-          <Ionicons color={Colors.white} size={80} name={"diamond-outline"} />
-        </View>
-      ))}
+        );
+      })}
     </ScreenWrapper>
   );
 };
 
 export default SubscriptionScreen;
+
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    justifyContent: "flex-start",
-    alignItems: "center",
-    backgroundColor: Colors.white,
-  },
-  customBackground: {
-    justifyContent: "center",
-    alignItems: "center",
-  },
+  customBackground: { justifyContent: "center", alignItems: "center" },
   HeadingText: {
     color: Colors.primary,
     fontFamily: FontFamily.Bold,
@@ -111,10 +193,7 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.Bold,
     fontSize: RFPercentage(4),
   },
-  logocontainer: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  logocontainer: { alignItems: "center", justifyContent: "center" },
   dot: {
     width: RFPercentage(1),
     height: RFPercentage(1),

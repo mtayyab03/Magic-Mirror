@@ -4,6 +4,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 const TOKEN_KEY = "mm_auth_token";
 const UID_KEY = "mm_user_uid";
 const FREE_COUNT_KEY = "mm_free_count";
+const SUB_KEY = "mm_is_subscribed"; // <-- NEW
 
 export async function saveAuth(token: string, uid: string) {
   await AsyncStorage.setItem(TOKEN_KEY, token);
@@ -36,4 +37,17 @@ export async function getFreeCount() {
 
 export async function resetFreeCount() {
   await AsyncStorage.setItem(FREE_COUNT_KEY, "0");
+}
+
+// ---------- SUBSCRIPTION HELPERS ----------
+export async function saveSubscriptionStatus(value: boolean) {
+  await AsyncStorage.setItem(SUB_KEY, value ? "1" : "0");
+}
+
+export async function getSubscriptionStatus() {
+  return (await AsyncStorage.getItem(SUB_KEY)) === "1";
+}
+
+export async function clearSubscriptionStatus() {
+  await AsyncStorage.removeItem(SUB_KEY);
 }

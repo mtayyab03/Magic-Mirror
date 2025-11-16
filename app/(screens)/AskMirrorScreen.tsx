@@ -36,7 +36,7 @@ const OPENAI_API_KEY =
 const AskMirrorScreen = () => {
   const [token, setToken] = useState<string | null>(null);
   const [uid, setUid] = useState<string | null>(null);
-  const [remaining, setRemaining] = useState(5); // FREE_LIMIT
+  const [remaining, setRemaining] = useState(3); // FREE_LIMIT
   const [question, setQuestion] = useState(""); // ✅ State for input
   const router = useRouter();
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
@@ -48,15 +48,19 @@ const AskMirrorScreen = () => {
     const init = async () => {
       const authData = await getAuth();
       if (!authData.token || !authData.uid) {
+        console.log("❌ No token found — redirecting to login");
         // redirect to login if not logged in
         router.replace("/LoginScreen");
         return;
       }
+
+      console.log("✅ Token found:", authData.token);
+      console.log("👤 UID:", authData.uid);
       setToken(authData.token);
       setUid(authData.uid);
 
       const usedCount = await getFreeCount();
-      setRemaining(5 - usedCount); // 10 is FREE_LIMIT
+      setRemaining(3 - usedCount); // 10 is FREE_LIMIT
     };
     init();
   }, []);
@@ -167,14 +171,14 @@ const AskMirrorScreen = () => {
     }
 
     const usedCount = await getFreeCount();
-    if (usedCount >= 10) {
+    if (usedCount >= 3) {
       router.push("/SubscriptionScreen");
       return;
     }
 
     // increment usage
     const newCount = await incrementFreeCount();
-    setRemaining(10 - newCount);
+    setRemaining(3 - newCount);
     setIsSending(true); // 🟢 lock
     try {
       const response = await fetch(

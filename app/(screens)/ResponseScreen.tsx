@@ -40,7 +40,7 @@ const ELEVENLABS_API_KEY =
 const OPENAI_API_KEY =
   "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";
 
-const FREE_LIMIT = 10;
+const FREE_LIMIT = 3;
 
 const ResponseScreen = () => {
   const [loading, setLoading] = useState(false);
@@ -282,7 +282,7 @@ const ResponseScreen = () => {
   const handleYes = async () => {
     const authData = await getAuth();
     if (!authData.token) {
-      router.replace("/(screens)/LoginScreen");
+      router.replace("/LoginScreen");
       return;
     }
 

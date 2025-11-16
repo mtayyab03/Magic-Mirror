@@ -1,6 +1,6 @@
 import { Fontisto, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { Formik, FormikHelpers } from "formik";
+import { Formik } from "formik";
 import React, { useState } from "react";
 import {
   Alert,
@@ -20,7 +20,7 @@ import ScreenWrapper from "@/components/Specific/ScreenWrapper";
 
 // firebase
 import { auth } from "@/firebaseConfig";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { saveAuth } from "@/providers/authStorage";
 import { signInWithEmailAndPassword } from "firebase/auth";
 
 // constants
@@ -59,10 +59,7 @@ export default function LoginScreen(props: LoginScreenProps) {
       .label("Password"),
   });
 
-  const handleLogin = async (
-    values: LoginFormValues,
-    formikHelpers: FormikHelpers<LoginFormValues>
-  ) => {
+  const handleLogin = async (values: LoginFormValues) => {
     setLoading(true);
     try {
       const userCredential = await signInWithEmailAndPassword(
@@ -72,7 +69,9 @@ export default function LoginScreen(props: LoginScreenProps) {
       );
 
       const token = await userCredential.user.getIdToken();
-      await AsyncStorage.setItem("userToken", token);
+      const uid = userCredential.user.uid;
+
+      await saveAuth(token, uid); // 🔥 IMPORTANT
 
       router.replace("/(screens)/HomeScreen");
     } catch (error) {
@@ -167,7 +166,7 @@ export default function LoginScreen(props: LoginScreenProps) {
                   style={styles.eyeicon}
                 >
                   <MaterialCommunityIcons
-                    color={Colors.lightBlack}
+                    color={Colors.white}
                     style={{ right: RFPercentage(1) }}
                     size={RFPercentage(3)}
                     name={eyeIcon ? "eye-outline" : "eye-off-outline"}

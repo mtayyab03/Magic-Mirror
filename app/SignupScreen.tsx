@@ -164,7 +164,7 @@ export default function SignupScreen(props: SignupScreenProps) {
                   style={styles.eyeicon}
                 >
                   <MaterialCommunityIcons
-                    color={Colors.lightBlack}
+                    color={Colors.white}
                     style={{ right: RFPercentage(1) }}
                     size={RFPercentage(3)}
                     name={eyeIcon ? "eye-outline" : "eye-off-outline"}
@@ -201,7 +201,7 @@ export default function SignupScreen(props: SignupScreenProps) {
                 style={styles.eyeicon}
               >
                 <MaterialCommunityIcons
-                  color={Colors.lightBlack}
+                  color={Colors.white}
                   style={{ right: RFPercentage(1) }}
                   size={RFPercentage(3)}
                   name={eyeIconConfirm ? "eye-outline" : "eye-off-outline"}
