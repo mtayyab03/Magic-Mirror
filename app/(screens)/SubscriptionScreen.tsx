@@ -1,6 +1,6 @@
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import {
   Alert,
   Image,
@@ -10,7 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useIAP, type Purchase } from "react-native-iap";
+import { useIAP } from "react-native-iap";
 import { RFPercentage } from "react-native-responsive-fontsize";
 
 // Components
@@ -23,72 +23,79 @@ import { FontFamily } from "@/constants/font";
 import { fontSize } from "@/constants/fontUtils";
 import icons from "@/constants/icons";
 
-const productSkus = ["basic_plan_id", "silver_plan_id"]; // your real SKUs
-type Product = {
-  title: string;
-  description: string;
-  price: string;
-  localizedPrice: string;
-  currency: string;
-  productId: string; // iOS/Android product identifier
-};
-
 const SubscriptionScreen = () => {
   const router = useRouter();
-  const [products, setProducts] = useState<any[]>([]);
 
-  const { connected, fetchProducts, requestPurchase, finishTransaction } =
-    useIAP({
-      onPurchaseError: (error) => {
-        console.error("Purchase error", error);
-        Alert.alert("Purchase failed", error.message);
-      },
-      onPurchaseSuccess: async (purchase: Purchase) => {
-        const receipt =
-          Platform.OS === "ios"
-            ? (purchase as any).transactionReceipt
-            : purchase.purchaseToken;
+  const {
+    connected,
+    products, // <-- FIX: use products from IAP
+    fetchProducts,
+    requestPurchase,
+    finishTransaction,
+  } = useIAP({
+    onPurchaseError: (error) => {
+      console.error("Purchase error", error);
+      Alert.alert("Purchase failed", error.message);
+    },
+    onPurchaseSuccess: async (purchase) => {
+      const receipt =
+        Platform.OS === "ios"
+          ? (purchase as any).transactionReceipt // cast to any for iOS
+          : purchase.purchaseToken;
 
-        if (!receipt) {
-          Alert.alert("Error", "No receipt found");
-          return;
-        }
+      if (!receipt) {
+        Alert.alert("Error", "No receipt found");
+        return;
+      }
 
-        try {
-          await finishTransaction({ purchase, isConsumable: false });
-          await saveSubscriptionStatus(true);
-          Alert.alert("Success", "Subscription activated!");
-          router.replace("/HomeScreen");
-        } catch (err) {
-          console.error("Finish transaction error:", err);
-          Alert.alert("Error", "Failed to finalize purchase");
-        }
-      },
-    });
+      try {
+        await finishTransaction({ purchase, isConsumable: false });
+        await saveSubscriptionStatus(true);
+        Alert.alert("Success", "Subscription activated!");
+        router.replace("/HomeScreen");
+      } catch (err) {
+        console.error("Finish transaction error:", err);
+        Alert.alert("Error", "Failed to finalize purchase");
+      }
+    },
+  });
 
   useEffect(() => {
-    if (connected) {
-      fetchProducts({ skus: productSkus, type: "subs" }).then((items) => {
-        setProducts(items ?? []);
-      });
-    }
+    if (!connected) return;
+
+    fetchProducts({ skus: ["mirror_monthly", "mirror_yearly"], type: "subs" })
+      .then((items) => {
+        console.log("Fetched subscriptions:", items);
+      })
+      .catch(console.error);
+
+    fetchProducts({ skus: ["single_question"], type: "in-app" })
+      .then((items) => {
+        console.log("Fetched one-time products:", items);
+      })
+      .catch(console.error);
   }, [connected]);
 
   const plans = [
     {
-      id: 1,
-      name: "Basic Plan",
-      price: "$0.00",
-      description: "3 free questions/day",
-      buttonText: "Free",
-      isPaid: false,
+      id: "mirror_monthly",
+      name: "Monthly Plan",
+      price: "$3.99 / month",
+      description: "Unlimited access — billed monthly",
+      isPaid: true,
     },
     {
-      id: 2,
-      name: "Silver Plan",
-      price: "$3.99 / month",
-      description: "Unlimited access",
-      buttonText: "Subscribe",
+      id: "mirror_yearly",
+      name: "Yearly Plan",
+      price: "$29.99 / year",
+      description: "Unlimited access — save 40%",
+      isPaid: true,
+    },
+    {
+      id: "single_question",
+      name: "Single Question",
+      price: "$0.99",
+      description: "Unlock 1 question",
       isPaid: true,
     },
   ];
@@ -136,10 +143,6 @@ const SubscriptionScreen = () => {
       </View>
 
       {plans.map((plan) => {
-        const product = products.find((p) =>
-          (p as Product).productId.includes("silver")
-        );
-        handlePurchasePress((product as Product).productId);
         return (
           <View key={plan.id} style={styles.container}>
             <View>
@@ -152,21 +155,39 @@ const SubscriptionScreen = () => {
 
               <TouchableOpacity
                 onPress={() => {
-                  if (plan.isPaid) {
-                    const product = products.find((p: any) =>
-                      (p as any).productId?.includes("silver")
+                  console.log("Available products:", products);
+                  console.log("Trying to purchase plan ID:", plan.id);
+
+                  // Find product from fetched IAP products
+                  const product = products.find(
+                    (p: any) =>
+                      p.id === plan.id ||
+                      ("productId" in p && p.productId === plan.id)
+                  );
+
+                  if (!product) {
+                    console.error("Product lookup failed for plan:", plan.id);
+                    Alert.alert(
+                      "Error",
+                      `Product not found in Play Store / App Store: ${plan.id}`
                     );
-                    handlePurchasePress((product as any)?.productId);
-                  } else {
-                    router.replace("/HomeScreen");
+                    return;
                   }
+
+                  // Pass the correct SKU depending on platform
+                  const sku =
+                    Platform.OS === "ios"
+                      ? (product as any).productId
+                      : (product as any).id;
+
+                  handlePurchasePress(sku);
                 }}
                 style={styles.buttonContainer}
               >
                 <Text
                   style={[styles.subtitleText, { color: Colors.lightBlack }]}
                 >
-                  {plan.buttonText}
+                  Subscribe
                 </Text>
               </TouchableOpacity>
             </View>

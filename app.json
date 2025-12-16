@@ -2,7 +2,7 @@
   "expo": {
     "name": "MagicMirror",
     "slug": "MagicMirror",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "magicmirror",
@@ -24,7 +24,7 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.tayyabgondal.MagicMirror",
-      "versionCode": 5
+      "versionCode": 6
     },
     "web": {
       "bundler": "metro",
@@ -41,6 +41,15 @@
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#2B1E2E"
+        }
+      ],
+      "react-native-iap",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "kotlinVersion": "2.1.20"
+          }
         }
       ]
     ],
